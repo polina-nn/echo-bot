@@ -1,0 +1,68 @@
+name:                echo-bot
+version:             0.1.0.0
+github:              "unknown/unknown"
+license:             BSD3
+author:              "John Doe"
+maintainer:          "unknown@example.com"
+copyright:           "John Doe"
+
+extra-source-files:
+- README.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README
+
+dependencies:
+- base >= 4.7 && < 5
+- bytestring
+- req # отправка http запросов
+- aeson # парсинг json
+- text                # for import Data.Text 
+- mtl                 # for use monada State 
+- QuickCheck
+- bytestring          # for use Data.ByteString.Lazy.Char8
+- hspec
+- transformers
+- containers
+- configurator        # работа с конфигом
+- time                #Data.Time.Calendar Data.Time для добавления текущего времени в логирование
+
+# About ghc options read here. https://ghc.gitlab.haskell.org/ghc/doc/users_guide/using-warnings.html#
+ghc-options:
+- -Wall              # enable almost all warnings
+- -Werror            # make warnings fatal
+- -Wincomplete-uni-patterns # Warns about places where a pattern-match might fail at runtime.
+- -Wcompat    # Turns on warnings that will be enabled by default in the future, 
+              # but remain off in normal compilations for the time being. 
+              # This allows library authors eager to make their code future compatible to adapt to new features before they even generate warnings.
+
+library:
+  source-dirs: src
+
+executables:
+  echo-bot-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - echo-bot
+
+tests:
+  echo-bot-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - echo-bot
