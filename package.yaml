@@ -1,10 +1,10 @@
 name:                echo-bot
 version:             0.1.0.0
-github:              "unknown/unknown"
+github:              "polina-nn/echo-bot"
 license:             BSD3
-author:              "John Doe"
-maintainer:          "unknown@example.com"
-copyright:           "John Doe"
+author:              "Polina Morozova"
+maintainer:          "morozova_p_v@mail.ru"
+copyright:           "2022 Polina Morozova"
 
 extra-source-files:
 - README.md
@@ -16,13 +16,15 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README
+description:         Please see the README <https://github.com/polina-nn/echo-bot#readme>
+
+
 
 dependencies:
 - base >= 4.7 && < 5
 - bytestring
-- req # отправка http запросов
-- aeson # парсинг json
+- req                 # sending http requests
+- aeson               # for use json
 - text                # for import Data.Text 
 - mtl                 # for use monada State 
 - QuickCheck
@@ -30,13 +32,13 @@ dependencies:
 - hspec
 - transformers
 - containers
-- configurator        # работа с конфигом
-- time                #Data.Time.Calendar Data.Time для добавления текущего времени в логирование
+- configurator        # for use Data.Configurator ( to work with config )
+- time                # Data.Time.Calendar Data.Time (to add current time at the log )
 
 # About ghc options read here. https://ghc.gitlab.haskell.org/ghc/doc/users_guide/using-warnings.html#
 ghc-options:
-- -Wall              # enable almost all warnings
-- -Werror            # make warnings fatal
+- -Wall                     # enable almost all warnings
+- -Werror                    # make warnings fatal
 - -Wincomplete-uni-patterns # Warns about places where a pattern-match might fail at runtime.
 - -Wcompat    # Turns on warnings that will be enabled by default in the future, 
               # but remain off in normal compilations for the time being. 

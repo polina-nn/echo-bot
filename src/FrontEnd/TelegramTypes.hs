@@ -2,8 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
--- | TgResponseTypes for http request to  API Telegram
-
+-- | TelegramTypes for http request to  API Telegram
 module FrontEnd.TelegramTypes where
 import qualified Data.Aeson as A
 import qualified GHC.Generics as G
