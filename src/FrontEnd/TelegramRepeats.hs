@@ -61,7 +61,3 @@ writeTgRepeat h chart rep = do
 -- read from config, if it could not seach
 getTgRep :: TgTypes.ChatId -> TgRepeats -> IO Repeats
 getTgRep ch tgRep = maybe Config.getRepetitionCount return (Map.lookup ch tgRep)
-
-{-- case Map.lookup ch tgRep of
-      Just a ->  return a
-      Nothing -> Config.getRepetitionCount --}

@@ -32,7 +32,7 @@ run h = do
 
 mainLoop :: Handle -> TgTypes.Token -> Maybe Int -> IO ()
 mainLoop h token lastUpdateId = do
-  maybeTgUpdate <- TgAPI.getTgUpdates token lastUpdateId -- maybeTgUpdate ::  Maybe [TgUpdate]
+  maybeTgUpdate <- TgAPI.getTgUpdates token lastUpdateId
   let lastUpdateId' = TgAPI.tgGetLastUpdateId maybeTgUpdate :: Maybe Int
   case lastUpdateId' of
     Nothing -> do
@@ -41,8 +41,6 @@ mainLoop h token lastUpdateId = do
         (T.pack "mainLoop:  empty update")
       mainLoop h token lastUpdateId'
     _ ->
-      -- send Maybe [TgUpdate] to sendTgAnswer and  Maybe [TgUpdate] == Nothing check again in sendTgAnswer
-      -- although there may be only Just [TgUpdate] ( we check lastUpdateId before )
       do
         TgAPI.sendTgAnswer (hBotHandle h) token maybeTgUpdate
         Logger.logDebug

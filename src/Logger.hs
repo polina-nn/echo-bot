@@ -20,10 +20,14 @@ newtype Handle m = Handle
   }
 
 data Level
-  = Debug    -- ^ Debug messages
-  | Info     -- ^ Notable information that requires no immediate action.
-  | Warning  -- ^ Something is probably wrong, and we should investigate.
-  | Error    -- ^ Something is wrong and immediate action is required.
+  = -- | Debug messages
+    Debug
+  | -- | Notable information that requires no immediate action.
+    Info
+  | -- | Something is probably wrong, and we should investigate.
+    Warning
+  | -- | Something is wrong and immediate action is required.
+    Error
   deriving (Show, Eq, Ord)
 
 logDebug, logInfo, logWarning, logError :: Handle m -> T.Text -> m ()
@@ -34,9 +38,7 @@ logError h = hLowLevelLog h Error
 
 -- | Concatenates a text and an instance of 'Show'. This is a
 -- convenience function to make logger function applications more
--- concise:
---
--- > Log.logError (hLogger h) "The error code is " .< e
+-- concise: > Log.logError (hLogger h) "The error code is " .< e
 (.<) :: (Show a) => T.Text -> a -> T.Text
 text .< a = text <> T.pack (show a)
 
