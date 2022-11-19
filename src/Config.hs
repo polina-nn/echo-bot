@@ -21,24 +21,22 @@ import qualified Data.Text as T
 import qualified EchoBot
 import qualified Logger
 import qualified Logger.Impl
+import qualified System.Directory as SD
 import qualified System.IO
 
 -- | Default config value.
--- Use in EchoBot.Config then file config.conf is not found, or fields are invalid
--- Use in Logger.Impl.Config then file config.conf is not found, but fields are invalid
+-- Use in EchoBot.Config and Logger.Impl.Config then file config.conf is not found, or fields are invalid
+-- Use the console version of the bot (because the token for the telegram version don't have)
 configDefault :: ConfigurationTypes.ConfigDefault
 configDefault =
   ConfigurationTypes.ConfigDefault
     { ConfigurationTypes.helpReply = "It is a help message",
       ConfigurationTypes.repeatReply = "How-many-repeat? Now it is {count} repetition",
       ConfigurationTypes.repetitionCount = 3,
-      ConfigurationTypes.stdError = "F",
-      ConfigurationTypes.minLogLevel = "D"
+      ConfigurationTypes.stdError = "File",
+      ConfigurationTypes.minLogLevel = "Debug",
+      ConfigurationTypes.frontEnd = "Console"
     }
-
--- | configFrontEndTypeDefault used then config.conf is not found, or token's field is invalid
-configFrontEndTypeDefault :: ConfigurationTypes.FrontEndType
-configFrontEndTypeDefault = ConfigurationTypes.ConsoleFrontEnd
 
 -- | Gets the bot config. In any case it can provide reasonable default values.
 getBotConfig :: IO EchoBot.Config
@@ -46,8 +44,7 @@ getBotConfig = do
   loadedConf <- Exc.try $ C.load [C.Required "config.conf"] :: IO (Either Exc.IOException C.Config)
   case loadedConf of
     Left exception -> do
-      putStrLn $ "getBotConfig: try to getBotConfig, but did not load config file. Fault:  " ++ show exception
-      putStrLn "getBotConfig: use Default Bot Config "
+      putStrLn $ "getBotConfig:OK use default bot config. Did not load config file: " ++ show exception
       return
         EchoBot.Config
           { EchoBot.confHelpReply = T.pack $ ConfigurationTypes.helpReply configDefault,
@@ -55,8 +52,6 @@ getBotConfig = do
             EchoBot.confRepetitionCount = ConfigurationTypes.repetitionCount configDefault
           }
     Right loadedConf' -> do
-      putStrLn "getBotConfig:: try to get from file"
-      --C.display loadedConf'
       makeBotConfig loadedConf'
 
 -- | Сreate a bot config from a config file. If a value is invalid, then taked it from the default config
@@ -65,6 +60,7 @@ makeBotConfig conf = do
   confHelpReply <- C.lookupDefault (ConfigurationTypes.helpReply configDefault) conf "config.helpReply" :: IO String
   confRepeatReply <- C.lookupDefault (ConfigurationTypes.repeatReply configDefault) conf "config.repeatReply" :: IO String
   confRepetitionCount <- C.lookupDefault (ConfigurationTypes.repetitionCount configDefault) conf "config.repetitionCount" :: IO Int
+  putStrLn "makeBotConfig: OK "
   return $
     EchoBot.Config
       { EchoBot.confHelpReply = T.pack confHelpReply,
@@ -78,8 +74,7 @@ getLoggerConfig = do
   loadedConf <- Exc.try $ C.load [C.Required "config.conf"] :: IO (Either Exc.IOException C.Config)
   case loadedConf of
     Left exception -> do
-      putStrLn $ "getLoggerConfig: try to getLoggerConfig. Config file did not load. Fault:  " ++ show exception
-      putStrLn "getLoggerConfig: use default Logger Config "
+      putStrLn $ "getLoggerConfig:OK use default logger config. Did not load config file: " ++ show exception
       confFileHandle <- validatefileHandle (ConfigurationTypes.stdError configDefault)
       confMinLevel <- validateLogLevel (ConfigurationTypes.minLogLevel configDefault)
       return
@@ -88,7 +83,6 @@ getLoggerConfig = do
             Logger.Impl.confMinLevel = confMinLevel
           }
     Right loadedConf' -> do
-      putStrLn "getLoggerConfig: try to get from file"
       makeLogConfig loadedConf'
 
 makeLogConfig :: C.Config -> IO Logger.Impl.Config
@@ -97,6 +91,7 @@ makeLogConfig conf = do
   readMinLogLevel <- C.lookupDefault (ConfigurationTypes.minLogLevel configDefault) conf "config.minLogLevel" :: IO String
   confFileHandle <- validatefileHandle readStdError
   confMinLevel <- validateLogLevel readMinLogLevel
+  putStrLn "makeLogConfig: OK"
   return
     Logger.Impl.Config
       { Logger.Impl.confFileHandle = confFileHandle,
@@ -106,43 +101,61 @@ makeLogConfig conf = do
 validatefileHandle :: String -> IO System.IO.Handle
 validatefileHandle fileText =
   case fileText of
-    "F" -> do System.IO.openFile "logs" System.IO.AppendMode
-    "C" -> return System.IO.stderr
+    "File" -> appendLog "logs"
+    "Terminal" -> return System.IO.stderr
     _ -> do
-      putStrLn "validatefileHandle: stdError is invalid in config.conf file"
-      return System.IO.stderr
+      putStrLn "validatefileHandle: stdError is invalid in config.conf file. Use stdError from the default config"
+      if ConfigurationTypes.stdError configDefault == "File"
+        then appendLog "logs"
+        else do return System.IO.stderr
+
+-- | appendLog  - Сheck the existence of the file, if it does't  exist, create and append
+appendLog :: FilePath -> IO System.IO.Handle
+appendLog path = do
+  rez <- SD.doesFileExist path
+  if rez
+    then do System.IO.openFile "logs" System.IO.AppendMode
+    else do
+      putStrLn "Create the file /logs"
+      System.IO.writeFile "logs" []
+      System.IO.openFile "logs" System.IO.AppendMode
 
 validateLogLevel :: String -> IO Logger.Level
 validateLogLevel levelText =
   case levelText of
-    "E" -> return Logger.Error
-    "W" -> return Logger.Warning
-    "I" -> return Logger.Info
-    "D" -> return Logger.Debug
+    "Error" -> return Logger.Error
+    "Warning" -> return Logger.Warning
+    "Info" -> return Logger.Info
+    "Debug" -> return Logger.Debug
     _ -> do
-      putStrLn "validateLogLevel: minLogLevel  is invalid in config.conf file"
-      return Logger.Info
+      putStrLn "validateLogLevel: minLogLevel  is invalid in config.conf file. Use logLevel from the default config"
+      validateLogLevelFromConfigDefault (ConfigurationTypes.minLogLevel configDefault)
+
+-- | validateLogLevelFromConfigDefault - read values from the default config
+validateLogLevelFromConfigDefault :: String -> IO Logger.Level
+validateLogLevelFromConfigDefault "Error" = return Logger.Error
+validateLogLevelFromConfigDefault "Warning" = return Logger.Warning
+validateLogLevelFromConfigDefault "Info" = return Logger.Info
+validateLogLevelFromConfigDefault _ = return Logger.Debug
 
 getFrontEndType :: IO ConfigurationTypes.FrontEndType
 getFrontEndType = do
   loadedConf <- Exc.try $ C.load [C.Required "config.conf"] :: IO (Either Exc.IOException C.Config)
   case loadedConf of
     Left exception -> do
-      putStrLn $ "getFrontEndType: try to getFrontEndType. Config file did not load. Fault:  " ++ show exception
-      putStrLn "getFrontEndType: use Default FrontEndType config -  console "
-      return configFrontEndTypeDefault
+      putStrLn $ "getFrontEndType:OK use default FrontEnd type config - Console. Did not load config file: " ++ show exception
+      return ConfigurationTypes.ConsoleFrontEnd
     Right loadedConf' -> do
-      putStrLn "getFrontEndType: Function getFrontEndType loaded config from file!"
-      --putStrLn $ "getFrontEndType: Config here:"
-      --C.display loadedConf'
       makeFrontEndTypeConfig loadedConf'
 
 makeFrontEndTypeConfig :: C.Config -> IO ConfigurationTypes.FrontEndType
 makeFrontEndTypeConfig conf = do
   readFrontEndType <- C.lookupDefault (ConfigurationTypes.frontEnd configDefault) conf "config.frontEnd" :: IO String
   case readFrontEndType of
-    "C" -> return ConfigurationTypes.ConsoleFrontEnd
-    "T" -> do
+    "Console" -> do
+      putStrLn "makeFrontEndTypeConfig: OK"
+      return ConfigurationTypes.ConsoleFrontEnd
+    "Telegram" -> do
       readToken <- C.lookup conf "config.token" :: IO (Maybe String)
       case readToken of
         Nothing -> do
@@ -152,7 +165,7 @@ makeFrontEndTypeConfig conf = do
           putStrLn $ "makeFrontEndTypeConfig: token from config file is " ++ token
           return ConfigurationTypes.TelegramFrontEnd {ConfigurationTypes.token = token}
     _ -> do
-      putStrLn "makeFrontEndTypeConfig: Invalid FrontEndType."
+      putStrLn "makeFrontEndTypeConfig: Invalid FrontEndType.Therefore run console bot"
       return ConfigurationTypes.ConsoleFrontEnd
 
 -- | help functions for telegram bot
