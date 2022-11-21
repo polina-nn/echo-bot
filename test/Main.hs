@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module EchoBotSpec
-  ( spec,
+module Main
+  ( main,
   )
 where
 
@@ -11,10 +11,13 @@ import Control.Monad.Writer (WriterT, runWriterT, tell)
 import qualified Data.Text as T
 import EchoBot (Config (..), Event (..), Handle (..), Response (..), State, makeState, respond)
 import qualified Logger
-import Test.Hspec (Expectation, Spec, describe, it, shouldBe, shouldNotBe, shouldSatisfy)
+import Test.Hspec (Expectation, Spec, describe, hspec, it, shouldBe, shouldNotBe, shouldSatisfy)
 import Test.QuickCheck (NonNegative (..), property, (==>))
 
 type Interp = WriterT [(Logger.Level, T.Text)] (S.StateT State IO)
+
+main :: IO ()
+main = hspec spec
 
 spec :: Spec
 spec =
