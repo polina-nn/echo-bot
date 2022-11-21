@@ -29,10 +29,11 @@ buildRequestParams [] = mempty
 buildRequestParams params = mconcat $ fmap (uncurry (Req.=:)) params
 
 -- | tgGetLastUpdateId -- returns number of last Update, then you call getUpdates
+-- if argument == Nothing => Update is empty, in other case we take last element of lastUpdateId
 tgGetLastUpdateId :: Maybe [TgTypes.TgUpdate] -> Maybe Int
-tgGetLastUpdateId Nothing = Nothing -- Update is empty
+tgGetLastUpdateId Nothing = Nothing
 tgGetLastUpdateId (Just []) = Nothing
-tgGetLastUpdateId (Just results) = Just (tgGetLastUpdateId' (last results)) -- take last element of lastUpdateId
+tgGetLastUpdateId (Just results) = Just (tgGetLastUpdateId' (last results))
   where
     tgGetLastUpdateId' :: TgTypes.TgUpdate -> Int
     tgGetLastUpdateId' TgTypes.TgUpdate {TgTypes.tgUpdateUpdateId = c} = c
@@ -68,7 +69,7 @@ getMeTg t =
 -- when you call getTgUpdates with (Just lastUpdateId),
 -- you call whith lastUpdateId+1, because you are waiting new update.
 getTgUpdates :: TgTypes.Token -> Maybe TgTypes.UpdateId -> IO (Maybe [TgTypes.TgUpdate])
-getTgUpdates token Nothing = getTgUpdatesHelp token [] -- это  params = mempty
+getTgUpdates token Nothing = getTgUpdatesHelp token []
 getTgUpdates token (Just lastUpdateId) = getTgUpdatesHelp token [("offset", T.pack $ show $ lastUpdateId + 1), ("timeout", T.pack $ show (50 :: Int))]
 
 getTgUpdatesHelp :: TgTypes.Token -> [(T.Text, T.Text)] -> IO (Maybe [TgTypes.TgUpdate])
@@ -90,13 +91,13 @@ getTgUpdatesHelp token params =
           (Req.responseBody response :: A.Value)
 
 -- | sendTgAnswer call with  Maybe [TgUpdate],
--- but if Maybe [TgUpdate]==Nothing, sendTgAnswer don't call in mainloop!
+-- but if Maybe [TgUpdate]== Nothing, sendTgAnswer don't call in mainloop!
 sendTgAnswer :: EchoBot.Handle IO T.Text -> TgTypes.Token -> Maybe [TgTypes.TgUpdate] -> IO ()
 sendTgAnswer h _ Nothing = do
   Logger.logError (EchoBot.hLogHandle h) "sendAnswer: argument TgUpdate ==  Nothing "
   return ()
 sendTgAnswer h token (Just tgUpdates) = do
-  let lastTgUpdate = last tgUpdates :: TgTypes.TgUpdate -- it is last update
+  let lastTgUpdate = last tgUpdates :: TgTypes.TgUpdate
   sendTgAnswerEcho h token (getMessageOrCallbackQuery lastTgUpdate)
 
 -- | sendTgAnswerEcho - help function for sendTgAnswer,
@@ -166,9 +167,13 @@ sendTgKeyboard h token chatId = do
   repeatMes <- Config.getRepeatReply
   sendTgMessageHelp 1 token "sendMessage" [("chat_id", T.pack $ show chatId), ("text", repeatMes), ("reply_markup", T.pack a)]
 
+-- | sendTgAnswerCallbackQuery -- telegram response after the user has worked with the keyboard
+-- Has three parts:
+-- 1. Send message "answerCallbackQuery". Its user sees at the top of the window
+-- 2. Send message "itMessageReplyMarkup".Remove the keyboard
+-- 3. Send message "sendMessage". Tell the user the number of selected repetitions
 sendTgAnswerCallbackQuery :: EchoBot.Handle IO T.Text -> TgTypes.Token -> TgTypes.TgCallbackQuery -> IO ()
 sendTgAnswerCallbackQuery h token callbackQuery =
-  -- send answerCallbackQuery, its user sees at the top of the window
   do
     sendTgMessageHelp
       1
@@ -177,7 +182,6 @@ sendTgAnswerCallbackQuery h token callbackQuery =
       [ ("callback_query_id", T.pack $ TgTypes.tgCallbackQueryId callbackQuery),
         ("text", T.pack "Your reply has been received")
       ]
-    -- remove the keyboard and tell the user the number of selected repetitions
     case TgTypes.tgCallbackQueryMessage callbackQuery :: Maybe TgTypes.TgMessage of
       Nothing -> do
         Logger.logError (EchoBot.hLogHandle h) "sendTgAnswerCallbackQuery: passed empty message to callbackQuery"

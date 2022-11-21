@@ -8,14 +8,9 @@ module Logger.Impl
 where
 
 import qualified Data.Text as T
---import qualified Data.Text.IO as TIO
-
 import qualified Data.Time as TM
 import qualified Logger
 import qualified System.IO
-
---import qualified Data.ByteString.Lazy.Char8 as BC
---import qualified Data.Text.Encoding
 
 data Config = Config
   { -- | A file handle to output formatted log messages to with
@@ -31,7 +26,6 @@ data Config = Config
 withHandle :: Config -> (Logger.Handle IO -> IO ()) -> IO ()
 withHandle config f = f Logger.Handle {Logger.hLowLevelLog = logWith config}
 
--- писала сама нужно переписать с учетом конфига
 logWith :: Config -> Logger.Level -> T.Text -> IO ()
 logWith сonf logLevel text = do
   let minLevel = confMinLevel сonf

@@ -15,14 +15,8 @@ module EchoBot
   )
 where
 
--- import Control.Monad (replicateM)
-
---import qualified Control.Monad.IO.Class
---import qualified Control.Monad.Trans.State
---import Data.Char
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
---import qualified Data.Text.IO as TIO
 import Logger ((.<))
 import qualified Logger
 
@@ -105,10 +99,6 @@ type Title = T.Text
 
 type RepetitionCount = Int
 
--- Обратите внимание, что здесь нам не нужно иметь дело с несколькими пользователями,
--- мы сохраняем количество повторений только для одного пользователя.
--- Пусть код вызывающей стороны отвечает за отслеживание нескольких пользователей и состояний их ботов.
-
 -- | An internal state of the bot.
 --
 -- Note that we don't have to deal with multiple users here, we only
@@ -134,8 +124,7 @@ checkConfig conf =
 getRepetitionCount :: State -> RepetitionCount
 getRepetitionCount = stRepetitionCount
 
--- | Оценивает ответы на переданное событие
--- | Evaluates responses for the passed event.
+-- | respond - evaluates responses for the passed event.
 respond :: Monad m => Handle m a -> Event a -> m [Response a]
 respond h (SetRepetitionCountEvent repetitionCount) =
   handleSettingRepetitionCount h repetitionCount
@@ -144,14 +133,12 @@ respond h (MessageEvent message)
   | isCommand h "/repeat" message = handleRepeatCommand h
   | otherwise = respondWithEchoedMessage h message
 
---  should output the predefined menu title for /repeat command
---  отправляю клавиатуру из конфига отвечающую на команду /repeat
+--  | handleRepeatCommand - should output the predefined menu title for /repeat command
 handleRepeatCommand :: Monad m => Handle m a -> m [Response a]
 handleRepeatCommand h = do
   Logger.logInfo (hLogHandle h) "Got the repeat command"
-  -- hModifyState' = hModifyState
   currentState <- hGetState h
-  let count = stRepetitionCount currentState -- текущие повторы
+  let count = stRepetitionCount currentState
       title = confRepeatReply $ hConfig h
       menuTitle = T.replace "{count}" (T.pack $ show count) title
       options = map (\n -> (n, SetRepetitionCountEvent n)) [1 .. 5]
@@ -163,31 +150,23 @@ handleSettingRepetitionCount h count = do
   hModifyState' h (\_ -> State count)
   return []
 
-{--
-  let a = pack $ show count
-      text = confRepeatReply $ hConfig h
-      resp = append text a
-  return [MessageResponse $ hMessageFromText h resp]
---}
-
--- OK реагирую только на команды "/help" или "/repeat"
+-- | isCommand  -- respond to "/help" or "/repeat" commands
 isCommand :: Handle m a -> T.Text -> a -> Bool
 isCommand h text message =
   let a = hTextFromMessage h message
    in (a == Just "/help" && text == "/help") || (a == Just "/repeat" && text == "/repeat")
 
--- OK отправляю эхо сообщение а несколько раз
+-- | respondWithEchoedMessage -- send echo "a" times
 respondWithEchoedMessage :: Monad m => Handle m a -> a -> m [Response a]
 respondWithEchoedMessage h message = do
   Logger.logInfo (hLogHandle h) $
     "Echoing user input: пользователь ввел" .< fromMaybe "<multimedia?>" (hTextFromMessage h message)
   state <- hGetState h
   let repetitionCount = stRepetitionCount state
-  --initialRepetition = confRepetitionCount $ hConfig h
+
   return $ replicate repetitionCount $ MessageResponse message
 
--- OK should output the help text for /help command
--- отправляю фразу из конфига отвечающую на команду /help
+-- | handleHelpCommand send the help text for /help command
 handleHelpCommand :: Monad m => Handle m a -> m [Response a]
 handleHelpCommand h = do
   Logger.logInfo (hLogHandle h) "Got the help command"
