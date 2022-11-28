@@ -36,6 +36,7 @@ dependencies:
 - time                # Data.Time.Calendar Data.Time (to add current time at the log )
 - directory           # for System.Directory (check if logs file exist)
 
+
 # About ghc options read here. https://ghc.gitlab.haskell.org/ghc/doc/users_guide/using-warnings.html#
 ghc-options:
 - -Wall                     # enable almost all warnings

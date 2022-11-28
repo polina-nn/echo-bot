@@ -1,8 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | The console front-end is responsible for console I/O and
--- appropriate handling of other high-level bot interactions (menu
--- output etc).
+-- appropriate handling of other high-level bot interactions (menu output etc).
 module FrontEnd.Console
   ( run,
     Handle (..),
