@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Main
   ( main,
   )
@@ -5,11 +7,12 @@ where
 
 import qualified Config
 import qualified ConfigurationTypes
-import Data.IORef (modifyIORef', newIORef, readIORef)
+import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
 import qualified Data.Text as T
 import qualified EchoBot
 import qualified FrontEnd.Console
 import qualified FrontEnd.Telegram
+import qualified FrontEnd.TelegramTypes as TgTypes
 import qualified Logger
 import qualified Logger.Impl
 import System.Exit (die)
@@ -32,10 +35,9 @@ runConsoleFrontEnd botHandle =
   FrontEnd.Console.run
     FrontEnd.Console.Handle {FrontEnd.Console.hBotHandle = botHandle}
 
-runTelegramFrontEnd :: EchoBot.Handle IO T.Text -> IO ()
-runTelegramFrontEnd botHandle =
-  FrontEnd.Telegram.run
-    FrontEnd.Telegram.Handle {FrontEnd.Telegram.hBotHandle = botHandle}
+runTelegramFrontEnd :: EchoBot.Handle IO TgTypes.Content -> IO ()
+runTelegramFrontEnd botHandle' =
+  FrontEnd.Telegram.run TgTypes.Handle {TgTypes.hBotHandle = botHandle'}
 
 withLogHandle :: (Logger.Handle IO -> IO ()) -> IO ()
 withLogHandle f = do
@@ -57,11 +59,29 @@ withLogHandle f = do
 --   another message type which can represent either text or
 --   multimedia messages. You will need to specify different functions
 --   @hMessageFromText@ and @hTextFromMessage@.
-makeBotHandleForTelegram :: Logger.Handle IO -> IO (EchoBot.Handle IO T.Text)
+makeBotHandleForTelegram :: Logger.Handle IO -> IO (EchoBot.Handle IO TgTypes.Content)
 makeBotHandleForTelegram logHandle = do
   botConfig <- Config.getBotConfig
-  initialState <- either (die . T.unpack) pure $ EchoBot.makeState botConfig
-  stateRef <- newIORef initialState
+  stateRef <- makeStateRef
+  pure
+    EchoBot.Handle
+      { EchoBot.hGetState = readIORef stateRef,
+        EchoBot.hModifyState' = modifyIORef' stateRef,
+        EchoBot.hLogHandle = logHandle,
+        EchoBot.hConfig = botConfig,
+        EchoBot.hTextFromMessage =
+          \case
+            TgTypes.ValidMessage text -> Just text
+            TgTypes.ErrorMessage text -> Just text
+            TgTypes.ErrorAPITelegram text -> Just text
+            TgTypes.Sticker text -> Just text,
+        EchoBot.hMessageFromText = TgTypes.ValidMessage
+      }
+
+makeBotHandleForPlainText :: Logger.Handle IO -> IO (EchoBot.Handle IO T.Text)
+makeBotHandleForPlainText logHandle = do
+  botConfig <- Config.getBotConfig
+  stateRef <- makeStateRef
   pure
     EchoBot.Handle
       { EchoBot.hGetState = readIORef stateRef,
@@ -72,17 +92,8 @@ makeBotHandleForTelegram logHandle = do
         EchoBot.hMessageFromText = id
       }
 
-makeBotHandleForPlainText :: Logger.Handle IO -> IO (EchoBot.Handle IO T.Text)
-makeBotHandleForPlainText logHandle = do
+makeStateRef :: IO (IORef EchoBot.State)
+makeStateRef = do
   botConfig <- Config.getBotConfig
   initialState <- either (die . T.unpack) pure $ EchoBot.makeState botConfig
-  stateRef <- newIORef initialState
-  pure
-    EchoBot.Handle
-      { EchoBot.hGetState = readIORef stateRef,
-        EchoBot.hModifyState' = modifyIORef' stateRef,
-        EchoBot.hLogHandle = logHandle,
-        EchoBot.hConfig = botConfig,
-        EchoBot.hTextFromMessage = Just,
-        EchoBot.hMessageFromText = id
-      }
+  newIORef initialState

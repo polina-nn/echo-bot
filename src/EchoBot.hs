@@ -1,17 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | The pure echo-bot logic module. It doesn't know anything about
--- Telegram, other chat protocols, or any input/output. This is why we
--- can easily test it.
+-- Telegram, other chat protocols, or any input/output. This is why we can easily test it.
 module EchoBot
   ( makeState,
     respond,
     getRepetitionCount,
-    Event (..), --(MessageEvent),
+    putRepetitionCount,
+    Event (..),
     Response (..),
     State (..),
     Handle (..),
     Config (..),
+    RepetitionCount,
+    Title,
   )
 where
 
@@ -25,8 +27,7 @@ import qualified Logger
 -- Its @m@ parameter is a monad type where all actions are performed.
 -- Since the bot doesn't know what @m@ is, it cannot use arbitrary IO.
 -- Everything it can do with the monad is passed as handle fields,
--- like 'hModifyState\''. For example, @m@ can be the 'IO' or 'State'
--- monad.
+-- like 'hModifyState\''. For example, @m@ can be the 'IO' or 'State'monad.
 --
 -- Its @a@ parameter is the message type. We don't impose any
 -- restrictions on the message type, hence the bot can support all
@@ -103,11 +104,11 @@ type RepetitionCount = Int
 --
 -- Note that we don't have to deal with multiple users here, we only
 -- keep the number of repetitions for a single user. Let the caller
--- code be responsible for tracking multiple users and states for
--- their bots.
+-- code be responsible for tracking multiple users and states for their bots.
 newtype State = State
   { stRepetitionCount :: RepetitionCount
   }
+  deriving (Eq, Show)
 
 -- | Creates an initial, default bot state for a user.
 makeState :: Config -> Either T.Text State
@@ -124,6 +125,10 @@ checkConfig conf =
 getRepetitionCount :: State -> RepetitionCount
 getRepetitionCount = stRepetitionCount
 
+putRepetitionCount :: RepetitionCount -> State
+putRepetitionCount rep =
+  State {stRepetitionCount = rep}
+
 -- | respond - evaluates responses for the passed event.
 respond :: Monad m => Handle m a -> Event a -> m [Response a]
 respond h (SetRepetitionCountEvent repetitionCount) =
@@ -133,10 +138,17 @@ respond h (MessageEvent message)
   | isCommand h "/repeat" message = handleRepeatCommand h
   | otherwise = respondWithEchoedMessage h message
 
---  | handleRepeatCommand - should output the predefined menu title for /repeat command
+-- | handleHelpCommand send the help text for /help command
+handleHelpCommand :: Monad m => Handle m a -> m [Response a]
+handleHelpCommand h = do
+  Logger.logInfo (hLogHandle h) "Got the help command "
+  let helpText = hMessageFromText h $ confHelpReply $ hConfig h
+  return [MessageResponse helpText]
+
+--  | handleRepeatCommand -- should output the predefined menu title for /repeat command
 handleRepeatCommand :: Monad m => Handle m a -> m [Response a]
 handleRepeatCommand h = do
-  Logger.logInfo (hLogHandle h) "Got the repeat command"
+  Logger.logInfo (hLogHandle h) "Got the repeat command "
   currentState <- hGetState h
   let count = stRepetitionCount currentState
       title = confRepeatReply $ hConfig h
@@ -160,15 +172,7 @@ isCommand h text message =
 respondWithEchoedMessage :: Monad m => Handle m a -> a -> m [Response a]
 respondWithEchoedMessage h message = do
   Logger.logInfo (hLogHandle h) $
-    "Echoing user input: пользователь ввел" .< fromMaybe "<multimedia?>" (hTextFromMessage h message)
+    "Echoing user input: user entered " .< fromMaybe "<multimedia?>" (hTextFromMessage h message)
   state <- hGetState h
   let repetitionCount = stRepetitionCount state
-
   return $ replicate repetitionCount $ MessageResponse message
-
--- | handleHelpCommand send the help text for /help command
-handleHelpCommand :: Monad m => Handle m a -> m [Response a]
-handleHelpCommand h = do
-  Logger.logInfo (hLogHandle h) "Got the help command"
-  let helpText = hMessageFromText h $ confHelpReply $ hConfig h
-  return [MessageResponse helpText]
