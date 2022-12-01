@@ -35,6 +35,8 @@ dependencies:
 - configurator        # for use Data.Configurator ( to work with config )
 - time                # Data.Time.Calendar Data.Time (to add current time at the log )
 - directory           # for System.Directory (check if logs file exist)
+- http-client
+- safe-exceptions      # for use Control.Exception.Safe 
 
 
 # About ghc options read here. https://ghc.gitlab.haskell.org/ghc/doc/users_guide/using-warnings.html#

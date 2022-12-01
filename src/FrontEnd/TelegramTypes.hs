@@ -4,11 +4,14 @@
 -- | TelegramTypes for http request to  API Telegram
 module FrontEnd.TelegramTypes where
 
+import qualified Control.Exception.Safe as EX
 import qualified Data.Aeson as A
 import qualified Data.Map as Map
 import qualified Data.Text as T
 import qualified EchoBot
 import qualified GHC.Generics as G
+import qualified Network.HTTP.Client as NC
+import qualified Network.HTTP.Req as Req
 
 type Token = String
 
@@ -24,14 +27,33 @@ type TgQueryParam = T.Text
 
 type TgValueParam = T.Text
 
-type TgError = String
-
 type TgRepeats = Map.Map ChatId Handle
 
 newtype Handle =
   Handle
     { hBotHandle :: EchoBot.Handle IO Content
     }
+
+data BotException
+  -- | ServiceAPIError  -- ERROR while communicating with Telegram services (Token is invalid)
+  = ServiceAPIError String
+  -- | NetworkError -- Network communication ERROR (Problem whith Internet)
+  | NetworkError EX.SomeException
+
+instance EX.Exception BotException
+
+rethrowReqException :: EX.MonadThrow m => Req.HttpException -> m a
+rethrowReqException (Req.VanillaHttpException (NC.HttpExceptionRequest _ (NC.StatusCodeException resp _))) =
+  EX.throw (ServiceAPIError $ show $ NC.responseStatus resp)
+rethrowReqException (Req.VanillaHttpException e) =
+  EX.throw (NetworkError $ EX.toException e)
+rethrowReqException (Req.JsonHttpException s) = EX.throw (ServiceAPIError s)
+
+instance Show BotException where
+  show (ServiceAPIError _) =
+    "ERROR while communicating with Telegram services. You must check the token in the 'config.conf' file. "
+  show (NetworkError _) =
+    "Network communication ERROR. You must check your Internet. "
 
 -- | Content - types of messages that the bot supports
 data Content
