@@ -149,7 +149,7 @@ checkCallbackFrom1To5 :: TgTypes.TgCallbackQuery -> Maybe Int
 checkCallbackFrom1To5 TgTypes.TgCallbackQuery {tgCallbackQueryData = Nothing} =
   Nothing
 checkCallbackFrom1To5 TgTypes.TgCallbackQuery {tgCallbackQueryData = Just val} =
-  case Text.Read.readMaybe val :: (Maybe Int) of
+  case Text.Read.readMaybe val of
     Just number ->
       if 1 <= number && number <= 5
         then Just number
