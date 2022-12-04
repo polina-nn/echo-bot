@@ -17,6 +17,7 @@ module FrontEnd.TelegramAPI
 import qualified Config
 import qualified Control.Exception.Safe as EX
 import qualified Control.Monad
+import qualified FrontEnd.TelegramException as TgException
 import qualified Control.Monad.IO.Class as MIO
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types
@@ -43,7 +44,7 @@ buildRequestParams params = mconcat $ fmap (uncurry (Req.=:)) params
 -- If token is invalid, getMeTg send  Exception!
 getMeTg :: TgTypes.Token -> IO TgTypes.TgUser
 getMeTg t =
-  EX.handle TgTypes.rethrowReqException $
+  EX.handle TgException.rethrowReqException $
   MIO.liftIO $
   Req.runReq Req.defaultHttpConfig $ do
     r <-
@@ -74,7 +75,7 @@ getTgUpdatesHelp ::
   -> [(TgTypes.TgQueryParam, TgTypes.TgValueParam)]
   -> IO (Maybe [TgTypes.TgUpdate])
 getTgUpdatesHelp token params =
-  EX.handle TgTypes.rethrowReqException $
+  EX.handle TgException.rethrowReqException $
   MIO.liftIO $
   Req.runReq Req.defaultHttpConfig $ do
     r <-
