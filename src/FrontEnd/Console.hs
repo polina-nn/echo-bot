@@ -48,7 +48,7 @@ printRespond h = help
     help (EchoBot.MenuResponse title options) = do
       TIO.putStrLn title
       textNumber <- TIO.getLine
-      let maybeNumber = Text.Read.readMaybe (T.unpack textNumber) :: (Maybe Int)
+      let maybeNumber = Text.Read.readMaybe (T.unpack textNumber)
       case maybeNumber of
         Just number ->
           if 1 <= number && number <= 5
