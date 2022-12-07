@@ -14,6 +14,7 @@ import qualified EchoBot
 import qualified FrontEnd.TelegramAPI as TgAPI
 import qualified FrontEnd.TelegramTypes as TgTypes
 import qualified Logger
+import qualified System.Exit as Exit
 
 run :: TgTypes.Handle -> IO ()
 run h = do
@@ -68,11 +69,13 @@ mainLoop h token lastUpdateId mapRepeats = do
           Logger.logDebug
             (EchoBot.hLogHandle (TgTypes.hBotHandle h))
             (T.append "mainLoop: response  " $ T.pack $ show response)
-          TgAPI.sendTgResponse
-            (TgTypes.hBotHandle currentChatHandle)
-            token
-            messageOrCallback
-            response
+          EX.catch
+            (TgAPI.sendTgResponse
+               (TgTypes.hBotHandle currentChatHandle)
+               token
+               messageOrCallback
+               response)
+            (handleException h)
           Logger.logDebug
             (EchoBot.hLogHandle (TgTypes.hBotHandle h))
             (T.append "mainLoop: message sent. Update number " $
@@ -83,4 +86,4 @@ handleException :: TgTypes.Handle -> EX.SomeException -> IO a
 handleException h (EX.SomeException e) = do
   Logger.logError (EchoBot.hLogHandle (TgTypes.hBotHandle h)) $
     T.pack ("handleError catch SomeException: ERROR! " ++ show e)
-  EX.throwIO e
+  Exit.exitFailure

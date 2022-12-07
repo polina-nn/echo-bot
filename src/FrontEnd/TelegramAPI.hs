@@ -17,7 +17,6 @@ module FrontEnd.TelegramAPI
 import qualified Config
 import qualified Control.Exception.Safe as EX
 import qualified Control.Monad
-import qualified FrontEnd.TelegramException as TgException
 import qualified Control.Monad.IO.Class as MIO
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types
@@ -26,6 +25,7 @@ import Data.IORef (IORef, modifyIORef', readIORef)
 import qualified Data.Map as Map
 import qualified Data.Text as T
 import qualified EchoBot
+import qualified FrontEnd.TelegramException as TgException
 import qualified FrontEnd.TelegramTypes as TgTypes
 import GHC.IORef (newIORef)
 import qualified Logger
@@ -362,6 +362,8 @@ sendTgMessage ::
   -> [(TgTypes.TgQueryParam, TgTypes.TgValueParam)]
   -> IO ()
 sendTgMessage h repeats token url params =
+  EX.handle TgException.rethrowReqException $
+  MIO.liftIO $
   Req.runReq Req.defaultHttpConfig $ do
     response <-
       Control.Monad.replicateM repeats $
