@@ -4,11 +4,13 @@
 -- | TelegramTypes for http request to  API Telegram
 module FrontEnd.TelegramTypes where
 
+
 import qualified Data.Aeson as A
 import qualified Data.Map as Map
 import qualified Data.Text as T
 import qualified EchoBot
 import qualified GHC.Generics as G
+
 
 type Token = String
 
@@ -24,14 +26,13 @@ type TgQueryParam = T.Text
 
 type TgValueParam = T.Text
 
-type TgError = String
-
 type TgRepeats = Map.Map ChatId Handle
 
 newtype Handle =
   Handle
     { hBotHandle :: EchoBot.Handle IO Content
     }
+
 
 -- | Content - types of messages that the bot supports
 data Content

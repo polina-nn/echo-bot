@@ -15,8 +15,9 @@ module FrontEnd.TelegramAPI
   ) where
 
 import qualified Config
+import qualified Control.Exception.Safe as EX
 import qualified Control.Monad
-import qualified Control.Monad.IO.Class
+import qualified Control.Monad.IO.Class as MIO
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types
 import qualified Data.ByteString.Lazy.Char8 as BC
@@ -24,6 +25,7 @@ import Data.IORef (IORef, modifyIORef', readIORef)
 import qualified Data.Map as Map
 import qualified Data.Text as T
 import qualified EchoBot
+import qualified FrontEnd.TelegramException as TgException
 import qualified FrontEnd.TelegramTypes as TgTypes
 import GHC.IORef (newIORef)
 import qualified Logger
@@ -40,25 +42,25 @@ buildRequestParams [] = mempty
 buildRequestParams params = mconcat $ fmap (uncurry (Req.=:)) params
 
 -- | getMeTg simple method for testing your bot's authentication token
--- If token is invalid, getMeTg send  Exception from http request!
-getMeTg :: TgTypes.Token -> IO (Either TgTypes.TgError TgTypes.TgUser)
+-- If token is invalid, getMeTg send  Exception!
+getMeTg :: TgTypes.Token -> IO TgTypes.TgUser
 getMeTg t =
+  EX.handle TgException.rethrowReqException $
+  MIO.liftIO $
   Req.runReq Req.defaultHttpConfig $ do
-    response <-
+    r <-
       Req.req
         Req.GET
         (Req.https "api.telegram.org" Req./: T.pack ("bot" ++ t) Req./: "getMe")
         Req.NoReqBody
         Req.jsonResponse
         mempty
-    let responsebody = Req.responseBody response :: A.Value
-    case Data.Aeson.Types.parseEither A.parseJSON responsebody of
-      Left errorMessage -> return $ Left errorMessage
-      Right result -> return $ Right $ TgTypes.tgGetMeResponseResult result
+    return $ (TgTypes.tgGetMeResponseResult . Req.responseBody) r
 
 -- | getTgUpdates -- get updates. If it return IO Nothig -- last TgUpdate is empty
 -- when you call getTgUpdates with (Just lastUpdateId),
 -- you call whith lastUpdateId+1, because you are waiting new update.
+-- If internet is invalid, getTgUpdates send  Exception!
 getTgUpdates ::
      TgTypes.Token -> Maybe TgTypes.UpdateId -> IO (Maybe [TgTypes.TgUpdate])
 getTgUpdates token Nothing = getTgUpdatesHelp token []
@@ -74,8 +76,10 @@ getTgUpdatesHelp ::
   -> [(TgTypes.TgQueryParam, TgTypes.TgValueParam)]
   -> IO (Maybe [TgTypes.TgUpdate])
 getTgUpdatesHelp token params =
+  EX.handle TgException.rethrowReqException $
+  MIO.liftIO $
   Req.runReq Req.defaultHttpConfig $ do
-    response <-
+    r <-
       Req.req
         Req.GET
         (Req.https "api.telegram.org" Req./: T.pack ("bot" ++ token) Req./:
@@ -371,6 +375,8 @@ sendTgMessage ::
   -> [(TgTypes.TgQueryParam, TgTypes.TgValueParam)]
   -> IO ()
 sendTgMessage h repeats token url params =
+  EX.handle TgException.rethrowReqException $
+  MIO.liftIO $
   Req.runReq Req.defaultHttpConfig $ do
     response <-
       Control.Monad.replicateM repeats $
@@ -381,7 +387,6 @@ sendTgMessage h repeats token url params =
         Req.jsonResponse
         (buildRequestParams params)
     Control.Monad.IO.Class.liftIO $ ckeckSendTgResponse h response
-
 ckeckSendTgResponse ::
      EchoBot.Handle IO TgTypes.Content
   -> [Req.JsonResponse TgTypes.TgSendResponse]

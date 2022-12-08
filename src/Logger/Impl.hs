@@ -39,7 +39,7 @@ logWith сonf logLevel text = do
             time ++
             " [" ++
             show (confMinLevel сonf) ++
-            "] " ++ "[" ++ show logLevel ++ "] " ++ T.unpack text -- BC.unpack (Data.Text.Encoding.encodeUtf8 text)
+            "] " ++ "[" ++ show logLevel ++ "] " ++ T.unpack text 
       System.IO.hPutStrLn (confFileHandle сonf) message
     else pure ()
 

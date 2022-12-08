@@ -2,11 +2,11 @@
 
 -- | The telegram front-end is responsible for telegram I/O
 module FrontEnd.Telegram
-  ( run,
-  )
-where
+  ( run
+  ) where
 
 import qualified Config
+import qualified Control.Exception.Safe as EX
 import Data.IORef (IORef, newIORef)
 import qualified Data.Map as Map
 import qualified Data.Text as T
@@ -14,20 +14,12 @@ import qualified EchoBot
 import qualified FrontEnd.TelegramAPI as TgAPI
 import qualified FrontEnd.TelegramTypes as TgTypes
 import qualified Logger
+import qualified System.Exit as Exit
 
 run :: TgTypes.Handle -> IO ()
 run h = do
   token <- Config.getToken
-  bot <- TgAPI.getMeTg token
-  case bot of
-    Left getMeTgError ->
-      Logger.logError
-        (EchoBot.hLogHandle (TgTypes.hBotHandle h))
-        (T.append "Telegramm bot can not run" $ T.pack getMeTgError)
-    Right _ ->
-      Logger.logDebug
-        (EchoBot.hLogHandle (TgTypes.hBotHandle h))
-        (T.append "run: Telegramm bot is running" $ T.pack $ show bot)
+  _ <- EX.catch (TgAPI.getMeTg token) (handleException h)
   let lastUpdateId = Nothing
   mapRepeats <- newIORef (Map.empty :: TgTypes.TgRepeats)
   mainLoop h token lastUpdateId mapRepeats
@@ -46,13 +38,14 @@ run h = do
 -- 6. In TgAPI.sendTgResponse send real messages in telegram
 -- 7. And so on
 mainLoop ::
-  TgTypes.Handle -> -- General Handle for telegram bot: Handle = Handle { hBotHandle :: EchoBot.Handle IO Content}
-  TgTypes.Token -> -- Telegramm token
-  Maybe TgTypes.UpdateId -> -- Last Update from telegram "getUpdates"
-  IORef TgTypes.TgRepeats -> -- Map of the handles for each chatId : TgRepeats = Map.Map ChatId Handle
-  IO ()
+     TgTypes.Handle -- General Handle for telegram bot: Handle = Handle { hBotHandle :: EchoBot.Handle IO Content}
+  -> TgTypes.Token -- Telegramm token
+  -> Maybe TgTypes.UpdateId -- Last Update from telegram "getUpdates"
+  -> IORef TgTypes.TgRepeats -- Map of the handles for each chatId : TgRepeats = Map.Map ChatId Handle
+  -> IO ()
 mainLoop h token lastUpdateId mapRepeats = do
-  maybeTgUpdate <- TgAPI.getTgUpdates token lastUpdateId
+  maybeTgUpdate <-
+    EX.catch (TgAPI.getTgUpdates token lastUpdateId) (handleException h)
   let lastUpdateAndId' = TgAPI.tgGetLastUpdateAndId maybeTgUpdate
   case lastUpdateAndId' of
     Nothing -> do
@@ -76,14 +69,21 @@ mainLoop h token lastUpdateId mapRepeats = do
           Logger.logDebug
             (EchoBot.hLogHandle (TgTypes.hBotHandle h))
             (T.append "mainLoop: response  " $ T.pack $ show response)
-          TgAPI.sendTgResponse
-            (TgTypes.hBotHandle currentChatHandle)
-            token
-            messageOrCallback
-            response
+          EX.catch
+            (TgAPI.sendTgResponse
+               (TgTypes.hBotHandle currentChatHandle)
+               token
+               messageOrCallback
+               response)
+            (handleException h)
           Logger.logDebug
             (EchoBot.hLogHandle (TgTypes.hBotHandle h))
-            ( T.append "mainLoop: message sent. Update number " $
-                T.pack $ show lastUpdateId'
-            )
+            (T.append "mainLoop: message sent. Update number " $
+             T.pack $ show lastUpdateId')
           mainLoop h token (Just lastUpdateId') mapRepeats
+
+handleException :: TgTypes.Handle -> EX.SomeException -> IO a
+handleException h (EX.SomeException e) = do
+  Logger.logError (EchoBot.hLogHandle (TgTypes.hBotHandle h)) $
+    T.pack ("handleError catch SomeException: ERROR! " ++ show e)
+  Exit.exitFailure
