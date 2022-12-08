@@ -31,6 +31,7 @@ import GHC.IORef (newIORef)
 import qualified Logger
 import qualified Network.HTTP.Req as Req
 import System.Exit (die)
+import qualified Text.Read
 
 -- | buildRequestParams -- create QueryString for request
 buildRequestParams ::
@@ -88,7 +89,9 @@ getTgUpdatesHelp token params =
         (buildRequestParams params)
     return $
       TgTypes.tgGetUpdateResponseBodyResult <$>
-      Data.Aeson.Types.parseMaybe A.parseJSON (Req.responseBody r :: A.Value)
+      Data.Aeson.Types.parseMaybe
+        A.parseJSON
+        (Req.responseBody response :: A.Value)
 
 tgGetLastUpdateAndId ::
      Maybe [TgTypes.TgUpdate] -> Maybe (TgTypes.TgUpdate, Int)
@@ -125,10 +128,12 @@ checkEvent (TgTypes.Callback mess _) = checkCallbackQuery mess
   where
     checkCallbackQuery ::
          TgTypes.TgCallbackQuery -> EchoBot.Event TgTypes.Content
-    checkCallbackQuery TgTypes.TgCallbackQuery {tgCallbackQueryData = Just rep} =
-      EchoBot.SetRepetitionCountEvent (read rep :: Int)
-    checkCallbackQuery _ =
-      EchoBot.MessageEvent $ TgTypes.ErrorMessage "Unknown content type!"
+    checkCallbackQuery callBack =
+      case checkCallbackFrom1To5 callBack of
+        Nothing ->
+          EchoBot.MessageEvent $
+          TgTypes.ErrorMessage "You entered something, but numbers from 1 to 5 "
+        Just number -> EchoBot.SetRepetitionCountEvent number
 checkEvent TgTypes.ErrorAPI =
   EchoBot.MessageEvent $ TgTypes.ErrorMessage "Error API Telegram!"
 checkEvent (TgTypes.Message mess _) = checkMessage mess
@@ -143,6 +148,17 @@ checkEvent (TgTypes.Message mess _) = checkMessage mess
     checkSticker :: TgTypes.TgSticker -> EchoBot.Event TgTypes.Content
     checkSticker TgTypes.TgSticker {tgStickerFileId = stringId} =
       EchoBot.MessageEvent $ TgTypes.Sticker (T.pack stringId)
+
+checkCallbackFrom1To5 :: TgTypes.TgCallbackQuery -> Maybe Int
+checkCallbackFrom1To5 TgTypes.TgCallbackQuery {tgCallbackQueryData = Nothing} =
+  Nothing
+checkCallbackFrom1To5 TgTypes.TgCallbackQuery {tgCallbackQueryData = Just val} =
+  case Text.Read.readMaybe val of
+    Just number ->
+      if 1 <= number && number <= 5
+        then Just number
+        else Nothing
+    Nothing -> Nothing
 
 -- | chooseCurrentChatHandle - choose/create handle for received message/callback.
 chooseCurrentChatHandle ::
@@ -322,13 +338,13 @@ sendTgAnswerCallbackQuery h token callbackQuery = do
     Just tgMessage -> do
       let chatId = TgTypes.tgChatId $ TgTypes.tgMessageChat tgMessage
           messageId = TgTypes.tgMessageMessageId tgMessage
-      case TgTypes.tgCallbackQueryData callbackQuery :: Maybe String of
+      case checkCallbackFrom1To5 callbackQuery of
         Nothing -> do
           Logger.logError
             (EchoBot.hLogHandle h)
-            "sendTgAnswerCallbackQuery: the user did not select a callbackQuery response"
+            "sendTgAnswerCallbackQuery: the user did not select a callbackQuery response or he selected not number or not from 1 to 5"
           return ()
-        Just сallbackQueryData -> do
+        Just number -> do
           sendTgMessage
             h
             1
@@ -345,12 +361,9 @@ sendTgAnswerCallbackQuery h token callbackQuery = do
             [ ("chat_id", T.pack $ show chatId)
             , ( "text"
               , T.pack $
-                "Answer received! Number of repetitions " ++ сallbackQueryData)
+                "Answer received! Number of repetitions " ++ show number)
             ]
-          let repetitionCount =
-                read сallbackQueryData :: EchoBot.RepetitionCount
-          _ <-
-            EchoBot.respond h (EchoBot.SetRepetitionCountEvent repetitionCount)
+          _ <- EchoBot.respond h (EchoBot.SetRepetitionCountEvent number)
           pure ()
 
 -- | sendTgMessage -- helper function for sending messages
@@ -373,8 +386,7 @@ sendTgMessage h repeats token url params =
         Req.NoReqBody
         Req.jsonResponse
         (buildRequestParams params)
-    MIO.liftIO $ ckeckSendTgResponse h response
-
+    Control.Monad.IO.Class.liftIO $ ckeckSendTgResponse h response
 ckeckSendTgResponse ::
      EchoBot.Handle IO TgTypes.Content
   -> [Req.JsonResponse TgTypes.TgSendResponse]
