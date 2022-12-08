@@ -1,11 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 -- | The telegram front-end is responsible for telegram I/O
 module FrontEnd.Telegram
   ( run
   ) where
 
-import qualified Config
 import qualified Control.Exception.Safe as EX
 import Data.IORef (IORef, newIORef)
 import qualified Data.Map as Map
@@ -17,12 +17,11 @@ import qualified Logger
 import qualified System.Exit as Exit
 
 run :: TgTypes.Handle -> IO ()
-run h = do
-  token <- Config.getToken
-  _ <- EX.catch (TgAPI.getMeTg token) (handleException h)
+run h@TgTypes.Handle {..} = do
+  _ <- EX.catch (TgAPI.getMeTg hToken) (handleException h)
   let lastUpdateId = Nothing
   mapRepeats <- newIORef (Map.empty :: TgTypes.TgRepeats)
-  mainLoop h token lastUpdateId mapRepeats
+  mainLoop h lastUpdateId mapRepeats
 
 -- | mainLoop --
 -- | I use common pure logic for all types of bots from the module EchoBot.
@@ -38,31 +37,27 @@ run h = do
 -- 6. In TgAPI.sendTgResponse send real messages in telegram
 -- 7. And so on
 mainLoop ::
-     TgTypes.Handle -- General Handle for telegram bot: Handle = Handle { hBotHandle :: EchoBot.Handle IO Content}
-  -> TgTypes.Token -- Telegramm token
+     TgTypes.Handle -- General Handle for telegram bot: Handle = Handle { hBotHandle :: EchoBot.Handle IO Content, hToken :: Token, hTemplateBotConfig :: EchoBot.Config }
   -> Maybe TgTypes.UpdateId -- Last Update from telegram "getUpdates"
   -> IORef TgTypes.TgRepeats -- Map of the handles for each chatId : TgRepeats = Map.Map ChatId Handle
   -> IO ()
-mainLoop h token lastUpdateId mapRepeats = do
+mainLoop h@TgTypes.Handle {..} lastUpdateId mapRepeats = do
   maybeTgUpdate <-
-    EX.catch (TgAPI.getTgUpdates token lastUpdateId) (handleException h)
+    EX.catch (TgAPI.getTgUpdates hToken lastUpdateId) (handleException h)
   let lastUpdateAndId' = TgAPI.tgGetLastUpdateAndId maybeTgUpdate
   case lastUpdateAndId' of
     Nothing -> do
       Logger.logDebug
         (EchoBot.hLogHandle (TgTypes.hBotHandle h))
         (T.pack "mainLoop:  empty update")
-      mainLoop h token lastUpdateId mapRepeats
+      mainLoop h lastUpdateId mapRepeats
     Just (lastUpdate', lastUpdateId') -> do
       let messageOrCallback = TgAPI.tgGetLastMessageOrCallback lastUpdate'
           event = TgAPI.checkEvent messageOrCallback
       maybeCurrentChatHandle <-
-        TgAPI.chooseCurrentChatHandle
-          (TgTypes.hBotHandle h)
-          messageOrCallback
-          mapRepeats
+        TgAPI.chooseCurrentChatHandle h messageOrCallback mapRepeats
       case maybeCurrentChatHandle of
-        Nothing -> mainLoop h token (Just lastUpdateId') mapRepeats
+        Nothing -> mainLoop h (Just lastUpdateId') mapRepeats
         Just currentChatHandle -> do
           response <-
             EchoBot.respond (TgTypes.hBotHandle currentChatHandle) event
@@ -70,17 +65,13 @@ mainLoop h token lastUpdateId mapRepeats = do
             (EchoBot.hLogHandle (TgTypes.hBotHandle h))
             (T.append "mainLoop: response  " $ T.pack $ show response)
           EX.catch
-            (TgAPI.sendTgResponse
-               (TgTypes.hBotHandle currentChatHandle)
-               token
-               messageOrCallback
-               response)
+            (TgAPI.sendTgResponse currentChatHandle messageOrCallback response)
             (handleException h)
           Logger.logDebug
             (EchoBot.hLogHandle (TgTypes.hBotHandle h))
             (T.append "mainLoop: message sent. Update number " $
              T.pack $ show lastUpdateId')
-          mainLoop h token (Just lastUpdateId') mapRepeats
+          mainLoop h (Just lastUpdateId') mapRepeats
 
 handleException :: TgTypes.Handle -> EX.SomeException -> IO a
 handleException h (EX.SomeException e) = do

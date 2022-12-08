@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Main
   ( main,
@@ -7,7 +8,7 @@ where
 
 import qualified Config
 import qualified ConfigurationTypes
-import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
+import Data.IORef (modifyIORef', newIORef, readIORef)
 import qualified Data.Text as T
 import qualified EchoBot
 import qualified FrontEnd.Console
@@ -23,9 +24,9 @@ main = do
   withLogHandle $ \logHandle -> do
     frontEnd <- Config.getFrontEndType
     case frontEnd of
-      ConfigurationTypes.TelegramFrontEnd _ -> do
+      ConfigurationTypes.TelegramFrontEnd token -> do
         botHandle <- makeBotHandleForTelegram logHandle
-        runTelegramFrontEnd botHandle
+        runTelegramFrontEnd botHandle token
       ConfigurationTypes.ConsoleFrontEnd -> do
         botHandle <- makeBotHandleForPlainText logHandle
         runConsoleFrontEnd botHandle
@@ -35,9 +36,15 @@ runConsoleFrontEnd botHandle =
   FrontEnd.Console.run
     FrontEnd.Console.Handle {FrontEnd.Console.hBotHandle = botHandle}
 
-runTelegramFrontEnd :: EchoBot.Handle IO TgTypes.Content -> IO ()
-runTelegramFrontEnd botHandle' =
-  FrontEnd.Telegram.run TgTypes.Handle {TgTypes.hBotHandle = botHandle'}
+runTelegramFrontEnd ::
+  EchoBot.Handle IO TgTypes.Content -> TgTypes.Token -> IO ()
+runTelegramFrontEnd botHandle' token =
+  FrontEnd.Telegram.run
+    TgTypes.Handle
+      { TgTypes.hBotHandle = botHandle',
+        TgTypes.hToken = token,
+        TgTypes.hTemplateBotConfig = EchoBot.hConfig botHandle'
+      }
 
 withLogHandle :: (Logger.Handle IO -> IO ()) -> IO ()
 withLogHandle f = do
@@ -59,10 +66,11 @@ withLogHandle f = do
 --   another message type which can represent either text or
 --   multimedia messages. You will need to specify different functions
 --   @hMessageFromText@ and @hTextFromMessage@.
-makeBotHandleForTelegram :: Logger.Handle IO -> IO (EchoBot.Handle IO TgTypes.Content)
+makeBotHandleForTelegram ::
+  Logger.Handle IO -> IO (EchoBot.Handle IO TgTypes.Content)
 makeBotHandleForTelegram logHandle = do
-  botConfig <- Config.getBotConfig
-  stateRef <- makeStateRef
+  (initialState, botConfig) <- makeStateAndConfig
+  stateRef <- newIORef initialState
   pure
     EchoBot.Handle
       { EchoBot.hGetState = readIORef stateRef,
@@ -80,8 +88,8 @@ makeBotHandleForTelegram logHandle = do
 
 makeBotHandleForPlainText :: Logger.Handle IO -> IO (EchoBot.Handle IO T.Text)
 makeBotHandleForPlainText logHandle = do
-  botConfig <- Config.getBotConfig
-  stateRef <- makeStateRef
+  (initialState, botConfig) <- makeStateAndConfig
+  stateRef <- newIORef initialState
   pure
     EchoBot.Handle
       { EchoBot.hGetState = readIORef stateRef,
@@ -92,8 +100,9 @@ makeBotHandleForPlainText logHandle = do
         EchoBot.hMessageFromText = id
       }
 
-makeStateRef :: IO (IORef EchoBot.State)
-makeStateRef = do
+makeStateAndConfig :: IO (EchoBot.State, EchoBot.Config)
+makeStateAndConfig = do
   botConfig <- Config.getBotConfig
   initialState <- either (die . T.unpack) pure $ EchoBot.makeState botConfig
-  newIORef initialState
+  return (initialState, botConfig)
+

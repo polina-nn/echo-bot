@@ -28,11 +28,15 @@ type TgValueParam = T.Text
 
 type TgRepeats = Map.Map ChatId Handle
 
-newtype Handle =
+data Handle =
   Handle
-    { hBotHandle :: EchoBot.Handle IO Content
+    { -- | hBotHandle -- keep current state of bot for current chatId
+      hBotHandle :: EchoBot.Handle IO Content,
+      -- | hToken -- keep bot's token 
+      hToken :: Token,
+      -- | hRepetitionCount -- for initial state of hBotHandle for any chat id. Use it, when create the new member of TgRepeat
+      hTemplateBotConfig :: EchoBot.Config
     }
-
 
 -- | Content - types of messages that the bot supports
 data Content
