@@ -41,6 +41,7 @@ logWith сonf logLevel text = do
             show (confMinLevel сonf) ++
             "] " ++ "[" ++ show logLevel ++ "] " ++ T.unpack text 
       System.IO.hPutStrLn (confFileHandle сonf) message
+      System.IO.hFlush (confFileHandle сonf) 
     else pure ()
 
 currentDay :: IO TM.Day
