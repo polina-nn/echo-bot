@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
--- | TelegramException errors leading to a bot stop, requiring the involvement of a developer/engineer
+-- | TelegramException errors leading to a bot stop, requiring the involvement of a engineer
 module FrontEnd.TelegramException where
 
 import qualified Control.Exception.Safe as EX
@@ -8,12 +8,12 @@ import qualified Network.HTTP.Client as NC
 import qualified Network.HTTP.Req as Req
 
 data BotException
-  -- | ServiceAPIError  -- ERROR while communicating with Telegram services (Token is invalid)
-  = ServiceAPIError String
-  -- | NetworkError -- Network communication ERROR (Problem whith Internet)
-  | NetworkError EX.SomeException
-  -- FormatError -- Failed while decoding response from Telegram failed
-  | FormatError String
+  = -- | ServiceAPIError  -- ERROR while communicating with Telegram services (Token is invalid)
+    ServiceAPIError String
+  | -- | NetworkError -- Network communication ERROR (Problem whith Internet)
+    NetworkError EX.SomeException
+  | -- FormatError -- Failed while decoding response from Telegram failed
+    FormatError String
 
 instance EX.Exception BotException
 
