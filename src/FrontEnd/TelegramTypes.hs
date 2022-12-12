@@ -4,13 +4,11 @@
 -- | TelegramTypes for http request to  API Telegram
 module FrontEnd.TelegramTypes where
 
-
 import qualified Data.Aeson as A
 import qualified Data.Map as Map
 import qualified Data.Text as T
 import qualified EchoBot
 import qualified GHC.Generics as G
-
 
 type Token = String
 
@@ -30,12 +28,12 @@ type TgRepeats = Map.Map ChatId Handle
 
 data Handle =
   Handle
-    { -- | hBotHandle -- keep current state of bot for current chatId
-      hBotHandle :: EchoBot.Handle IO Content,
+      -- | hBotHandle -- keep current state of bot for current chatId
+    { hBotHandle :: EchoBot.Handle IO Content
       -- | hToken -- keep bot's token 
-      hToken :: Token,
+    , hToken :: Token
       -- | hRepetitionCount -- for initial state of hBotHandle for any chat id. Use it, when create the new member of TgRepeat
-      hTemplateBotConfig :: EchoBot.Config
+    , hTemplateBotConfig :: EchoBot.Config
     }
 
 -- | Content - types of messages that the bot supports
@@ -143,19 +141,19 @@ data TgMessage =
     -- | Unique message identifier inside this chat
     , tgMessageMessageId :: Int
     -- | Optional. Sender, empty for messages sent to channels
-    , tgMessageFrom :: Maybe TgUser
+    --, tgMessageFrom :: Maybe TgUser
     -- | Optional. Sender of the message, sent on behalf of a chat.
-    , tgMessageSenderChat :: Maybe TgChat
+   -- , tgMessageSenderChat :: Maybe TgChat
     -- | Date the message was sent in Unix time
-    , tgMessageDate :: Int
+   -- , tgMessageDate :: Int
     -- | Optional. Date the message was last edited in Unix time.
-    , tgMessageEditDate :: Maybe Integer
+    --, tgMessageEditDate :: Maybe Integer
     -- | Conversation the message belongs to.
     , tgMessageChat :: TgChat
     -- | Optional. For forwarded messages, sender of the original message
-    , tgMessageForwardFrom :: Maybe TgUser
+   -- , tgMessageForwardFrom :: Maybe TgUser
     -- | Optional. For messages forwarded from channels or from anonymous administrators, information about the original sender chat
-    , tgMessageForwardFromChat :: Maybe TgChat
+  --  , tgMessageForwardFromChat :: Maybe TgChat
     }
   deriving (Show, G.Generic)
 
@@ -170,17 +168,17 @@ data TgCallbackQuery =
     -- | Unique identifier for this query
     { tgCallbackQueryId :: String
     -- | Sender
-    , tgCallbackQueryFrom :: TgUser
+   -- , tgCallbackQueryFrom :: TgUser
     -- | Optional. Message with the callback button that originated the query. Note that message content and message date will not be available if the message is too old
     , tgCallbackQueryMessage :: Maybe TgMessage
     -- | 	Optional. Identifier of the message sent via the bot in inline mode, that originated the query.
-    , tgCallbackQueryInlineMessageId :: Maybe String
+   -- , tgCallbackQueryInlineMessageId :: Maybe String
     -- | Global identifier, uniquely corresponding to the chat to which the message with the callback button was sent. Useful for high scores in games.
-    , tgCallbackQueryChatInstance :: String
+   -- , tgCallbackQueryChatInstance :: String
     -- | Optional. Data associated with the callback button. Be aware that a bad client can send arbitrary data in this field.
     , tgCallbackQueryData :: Maybe String
     -- | Optional. Short name of a Game to be returned, serves as the unique identifier for the game
-    , tgCallbackQueryGameShortName :: Maybe String
+    --, tgCallbackQueryGameShortName :: Maybe String
     }
   deriving (Show, G.Generic)
 
@@ -227,18 +225,6 @@ data TgUser =
     , tgUserIsBot :: Bool
     -- | User's or bot's first name
     , tgUserFirstName :: String
-    -- | Optional. User's or bot's last name
-    , tgUserLastName :: Maybe String
-    -- | Optional. User's or bot's username
-    , tgUserUsername :: Maybe String
-    -- | Optional. IETF language tag of the user's language
-    , tgUserLanguageCode :: Maybe String
-    -- | Optional. True, if the bot can be invited to groups. Returned only in getMe.
-    , tgUserCanJoinGroups :: Maybe Bool
-    -- | Optional. True, if privacy mode is disabled for the bot. Returned only in getMe.
-    , tgUserCanReadAllGroupMessages :: Maybe Bool
-    -- | Optional. True, if the bot supports inline queries. Returned only in getMe.
-    , tgUserSupportsInlineQueries :: Maybe Bool
     }
   deriving (Show, G.Generic)
 
@@ -248,20 +234,10 @@ instance A.FromJSON TgUser where
       A.defaultOptions {A.fieldLabelModifier = A.camelTo2 '_' . drop 6}
 
 -- |  Chat .This type represents a chat.
-data TgChat =
+newtype TgChat =
   TgChat
     -- | Unique identifier for this chat.
     { tgChatId :: Int
-    -- | Type of chat, can be either “private”, “group”, “supergroup” or “channel”
-    , tgChatType :: String
-    -- | 	Optional. Title, for supergroups, channels and group chats
-    , tgChatTitle :: Maybe String
-    -- | Optional. Username, for private chats, supergroups and channels if available
-    , tgChatUsername :: Maybe String
-    -- | Optional. First name of the other party in a private chat
-    , tgChatFirstName :: Maybe String
-    -- | Optional. Last name of the other party in a private chat
-    , tgChatLastName :: Maybe String
     }
   deriving (Show, G.Generic)
 
@@ -271,28 +247,10 @@ instance A.FromJSON TgChat where
       A.defaultOptions {A.fieldLabelModifier = A.camelTo2 '_' . drop 6}
 
 -- TgSticker This object represents a sticker.
-data TgSticker =
+newtype TgSticker =
   TgSticker
     -- | Identifier for this file, which can be used to download or reuse the file
     { tgStickerFileId :: String
-    -- | Unique identifier for this file, which is supposed to be the same over time and for different bots. Can't be used to download or reuse the file.
-    , tgStickerFileUniqueId :: String
-    -- | Sticker width
-    , tgStickerWidth :: Int
-    -- | Sticker height
-    , tgStickerHeight :: Int
-    -- |  True, if the sticker is animated
-    , tgStickerIsAnimated :: Bool
-    -- | 	Optional. Sticker thumbnail in the .WEBP or .JPG format
-    , tgStickerThumb :: Maybe TgPhotoSize
-    -- | Optional. Emoji associated with the sticker
-    , tgStickerEmoji :: Maybe String
-    -- | 	Optional. Name of the sticker set to which the sticker belongs
-    , tgStickerSetName :: Maybe String
-    -- | Optional. For mask stickers, the position where the mask should be placed
-    , tgStickerMaskPosition :: Maybe TgMaskPosition
-    -- | Optional. File size in bytes
-    , tgStickerFileSize :: Maybe Int
     }
   deriving (Show, G.Generic)
 
@@ -300,43 +258,3 @@ instance A.FromJSON TgSticker where
   parseJSON =
     A.genericParseJSON
       A.defaultOptions {A.fieldLabelModifier = A.camelTo2 '_' . drop 9}
-
--- TgPhotoSize This object represents one size of a photo or a file / sticker thumbnail.
-data TgPhotoSize =
-  TgPhotoSize
-    -- | Identifier for this file, which can be used to download or reuse the file
-    { tgPhotoSizeFileId :: String
-    -- | Unique identifier for this file, which is supposed to be the same over time and for different bots. Can't be used to download or reuse the file.
-    , tgPhotoSizeFileUniqueId :: String
-    -- | Photo width
-    , tgPhotoSizeWidth :: Int
-    -- | Photo height
-    , tgPhotoSizeHeight :: Int
-    -- | Optional. File size in bytes
-    , tgPhotoSizeFileSize :: Maybe Int
-    }
-  deriving (Show, G.Generic)
-
-instance A.FromJSON TgPhotoSize where
-  parseJSON =
-    A.genericParseJSON
-      A.defaultOptions {A.fieldLabelModifier = A.camelTo2 '_' . drop 11}
-
--- TgMaskPosition This object describes the position on faces where a mask should be placed by default.
-data TgMaskPosition =
-  TgMaskPosition
-    -- | The part of the face relative to which the mask should be placed. One of “forehead”, “eyes”, “mouth”, or “chin”.
-    { tgMaskPositionPoint :: String
-    -- | Shift by X-axis measured in widths of the mask scaled to the face size, from left to right.
-    , tgMaskPositionXShift :: Float
-    -- | Shift by Y-axis measured in heights of the mask scaled to the face size, from top to bottom.
-    , tgMaskPositionYShift :: Float
-    -- | Mask scaling coefficient. For example, 2.0 means double size.
-    , tgMaskPositionScale :: Float
-    }
-  deriving (Show, G.Generic)
-
-instance A.FromJSON TgMaskPosition where
-  parseJSON =
-    A.genericParseJSON
-      A.defaultOptions {A.fieldLabelModifier = A.camelTo2 '_' . drop 14}

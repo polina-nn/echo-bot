@@ -6,7 +6,6 @@ module Config
   ( getBotConfig,
     getLoggerConfig,
     getFrontEndType,
-    getToken,
   )
 where
 
@@ -215,7 +214,3 @@ makeFrontEndTypeConfig conf = do
       putStrLn
         "makeFrontEndTypeConfig: Invalid FrontEndType.Therefore run console bot"
       return ConfigurationTypes.ConsoleFrontEnd
-
--- | help functions for telegram bot
-getToken :: IO String
-getToken = ConfigurationTypes.token <$> getFrontEndType

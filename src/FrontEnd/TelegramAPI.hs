@@ -43,19 +43,21 @@ buildRequestParams params = mconcat $ fmap (uncurry (Req.=:)) params
 
 -- | getMeTg simple method for testing your bot's authentication token
 -- If token is invalid, getMeTg send  Exception!
-getMeTg :: TgTypes.Token -> IO TgTypes.TgUser
-getMeTg t =
+getMeTg :: TgTypes.Handle -> IO TgTypes.TgUser
+getMeTg TgTypes.Handle {..} =
   EX.handle TgException.rethrowReqException $
     MIO.liftIO $
       Req.runReq Req.defaultHttpConfig $ do
         r <-
           Req.req
             Req.GET
-            (Req.https "api.telegram.org" Req./: T.pack ("bot" ++ t) Req./: "getMe")
+            (Req.https "api.telegram.org" Req./: T.pack ("bot" ++ hToken) Req./: "getMe")
             Req.NoReqBody
             Req.jsonResponse
             mempty
-        return $ (TgTypes.tgGetMeResponseResult . Req.responseBody) r
+        let bot = (TgTypes.tgGetMeResponseResult . Req.responseBody) r
+        MIO.liftIO $ Logger.logDebug (EchoBot.hLogHandle hBotHandle) $ T.append (T.pack "getMeTg: OK!") (T.pack $ show bot)
+        return bot
 
 -- | getTgUpdates -- get updates. If it return IO Nothig -- last TgUpdate is empty
 -- when you call getTgUpdates with (Just lastUpdateId),
