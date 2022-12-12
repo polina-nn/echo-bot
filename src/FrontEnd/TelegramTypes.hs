@@ -140,20 +140,8 @@ data TgMessage =
     , tgMessageSticker :: Maybe TgSticker
     -- | Unique message identifier inside this chat
     , tgMessageMessageId :: Int
-    -- | Optional. Sender, empty for messages sent to channels
-    --, tgMessageFrom :: Maybe TgUser
-    -- | Optional. Sender of the message, sent on behalf of a chat.
-   -- , tgMessageSenderChat :: Maybe TgChat
-    -- | Date the message was sent in Unix time
-   -- , tgMessageDate :: Int
-    -- | Optional. Date the message was last edited in Unix time.
-    --, tgMessageEditDate :: Maybe Integer
     -- | Conversation the message belongs to.
     , tgMessageChat :: TgChat
-    -- | Optional. For forwarded messages, sender of the original message
-   -- , tgMessageForwardFrom :: Maybe TgUser
-    -- | Optional. For messages forwarded from channels or from anonymous administrators, information about the original sender chat
-  --  , tgMessageForwardFromChat :: Maybe TgChat
     }
   deriving (Show, G.Generic)
 
@@ -167,18 +155,10 @@ data TgCallbackQuery =
   TgCallbackQuery
     -- | Unique identifier for this query
     { tgCallbackQueryId :: String
-    -- | Sender
-   -- , tgCallbackQueryFrom :: TgUser
     -- | Optional. Message with the callback button that originated the query. Note that message content and message date will not be available if the message is too old
     , tgCallbackQueryMessage :: Maybe TgMessage
-    -- | 	Optional. Identifier of the message sent via the bot in inline mode, that originated the query.
-   -- , tgCallbackQueryInlineMessageId :: Maybe String
-    -- | Global identifier, uniquely corresponding to the chat to which the message with the callback button was sent. Useful for high scores in games.
-   -- , tgCallbackQueryChatInstance :: String
     -- | Optional. Data associated with the callback button. Be aware that a bad client can send arbitrary data in this field.
     , tgCallbackQueryData :: Maybe String
-    -- | Optional. Short name of a Game to be returned, serves as the unique identifier for the game
-    --, tgCallbackQueryGameShortName :: Maybe String
     }
   deriving (Show, G.Generic)
 
@@ -192,7 +172,6 @@ data TgInlineKeyboardButton =
   TgInlineKeyboardButton
     -- | 	Label text on the button
     { tgInlineKeyboardButtonText :: String
-    -- | Optional. Data to be sent in a callback query to the bot when button is pressed, 1-64 bytes.
     -- | In the project, a mandatory parameter, where we will catch the number of repetitions that the user wants
     , tgInlineKeyboardButtonCallbackData :: String
     }
