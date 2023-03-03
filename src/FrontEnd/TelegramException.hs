@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 -- | TelegramException errors leading to a bot stop, requiring the involvement of a engineer
 module FrontEnd.TelegramException where
 

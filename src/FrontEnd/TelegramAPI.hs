@@ -1,7 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-
 -- | TelegramAPI has function for http requests to API Telegram  (type IO)
 -- and some service functions for return required record fields of TgUpdate, TgMessage
 module FrontEnd.TelegramAPI
@@ -28,7 +24,7 @@ import qualified EchoBot
 import qualified FrontEnd.TelegramException as TgException
 import FrontEnd.TelegramTypes (Handle (hToken))
 import qualified FrontEnd.TelegramTypes as TgTypes
-import qualified Logger
+import Logger (logDebug, logError, (.<))
 import qualified Network.HTTP.Req as Req
 import System.Exit (die)
 import qualified Text.Read
@@ -56,12 +52,12 @@ getMeTg TgTypes.Handle {..} =
             Req.jsonResponse
             mempty
         let bot = (TgTypes.tgGetMeResponseResult . Req.responseBody) r
-        MIO.liftIO $ Logger.logDebug (EchoBot.hLogHandle hBotHandle) $ T.append (T.pack "getMeTg: OK!") (T.pack $ show bot)
+        MIO.liftIO $ Logger.logDebug (EchoBot.hLogHandle hBotHandle) $ "getMeTg: OK!" .< bot
         return bot
 
--- | getTgUpdates -- get updates. If it return IO Nothig -- last TgUpdate is empty
+-- | getTgUpdates -- get updates. If it return IO Nothing -- last TgUpdate is empty
 -- when you call getTgUpdates with (Just lastUpdateId),
--- you call whith lastUpdateId+1, because you are waiting new update.
+-- you call with lastUpdateId+1, because you are waiting new update.
 -- If internet is invalid, getTgUpdates send  Exception!
 getTgUpdates ::
   TgTypes.Token -> Maybe TgTypes.UpdateId -> IO (Maybe [TgTypes.TgUpdate])
@@ -114,12 +110,12 @@ tgGetLastMessageOrCallback TgTypes.TgUpdate {TgTypes.tgUpdateChannelPost = Just 
   TgTypes.Message mess (TgTypes.tgChatId $ TgTypes.tgMessageChat mess)
 tgGetLastMessageOrCallback TgTypes.TgUpdate {TgTypes.tgUpdateEditedChannelPost = Just mess} =
   TgTypes.Message mess (TgTypes.tgChatId $ TgTypes.tgMessageChat mess)
-tgGetLastMessageOrCallback TgTypes.TgUpdate {TgTypes.tgUpdateCallbackQuery = Just callbac} =
-  case TgTypes.tgCallbackQueryMessage callbac :: Maybe TgTypes.TgMessage of
-    Nothing -> TgTypes.Callback callbac Nothing
+tgGetLastMessageOrCallback TgTypes.TgUpdate {TgTypes.tgUpdateCallbackQuery = Just callBack} =
+  case TgTypes.tgCallbackQueryMessage callBack :: Maybe TgTypes.TgMessage of
+    Nothing -> TgTypes.Callback callBack Nothing
     Just tgMessage ->
       TgTypes.Callback
-        callbac
+        callBack
         (Just (TgTypes.tgChatId $ TgTypes.tgMessageChat tgMessage))
 tgGetLastMessageOrCallback _ = TgTypes.ErrorAPI
 
@@ -189,24 +185,11 @@ chooseCurrentChatHandle' h@TgTypes.Handle {..} chat mapRepeats = do
       modifyIORef' mapRepeats fun
       mapRepeats'' <- readIORef mapRepeats
       state <- EchoBot.hGetState (TgTypes.hBotHandle newHandle')
-      Logger.logDebug (EchoBot.hLogHandle hBotHandle) $
-        T.concat
-          [ T.pack
-              "chooseCurrentChatHandle: OK! NEW handle with state from config ",
-            T.pack $ show state,
-            T.pack "for new chart Id ",
-            T.pack $ show chat
-          ]
+      Logger.logDebug (EchoBot.hLogHandle hBotHandle) $ T.append ("chooseCurrentChatHandle: OK! NEW handle with state from config " .< state) (" for new chart Id " .< chat)
       return $ Just (mapRepeats'' Map.! chat)
     Just val -> do
       state <- EchoBot.hGetState (TgTypes.hBotHandle val)
-      Logger.logDebug (EchoBot.hLogHandle hBotHandle) $
-        T.concat
-          [ T.pack "chooseCurrentChatHandle: OK! Handle with state  ",
-            T.pack $ show state,
-            T.pack "for chart Id",
-            T.pack $ show chat
-          ]
+      Logger.logDebug (EchoBot.hLogHandle hBotHandle) $ T.append ("chooseCurrentChatHandle: OK! Handle with state  " .< state) (" for chart Id" .< chat)
       return $ Just val
 
 makeBotHandle :: TgTypes.Handle -> IO TgTypes.Handle
@@ -244,8 +227,8 @@ sendTgResponse h (TgTypes.Message tgMes _) resp@((EchoBot.MessageResponse (TgTyp
   sendTgText h (length resp) tgMes val
 sendTgResponse h (TgTypes.Message tgMes _) ((EchoBot.MessageResponse (TgTypes.ErrorMessage val)) : _) =
   sendTgText h 1 tgMes val
-sendTgResponse h (TgTypes.Message tgMes _) resp@((EchoBot.MessageResponse (TgTypes.Sticker stikerId)) : _) =
-  sendTgStiker h (length resp) tgMes stikerId
+sendTgResponse h (TgTypes.Message tgMes _) resp@((EchoBot.MessageResponse (TgTypes.Sticker stickerId)) : _) =
+  sendTgSticker h (length resp) tgMes stickerId
 sendTgResponse h (TgTypes.Message tgMes _) ((EchoBot.MenuResponse title _) : _) =
   sendTgKeyboard h tgMes title
 sendTgResponse h (TgTypes.Callback call (Just _)) [] =
@@ -276,19 +259,19 @@ sendTgText h repeats tgMes text = do
     "sendMessage"
     [("chat_id", T.pack $ show chatId), ("text", text)]
 
-sendTgStiker ::
+sendTgSticker ::
   TgTypes.Handle ->
   EchoBot.RepetitionCount ->
   TgTypes.TgMessage ->
   T.Text ->
   IO ()
-sendTgStiker h repeats tgMes stiker = do
+sendTgSticker h repeats tgMes sticker = do
   let chatId = TgTypes.tgChatId $ TgTypes.tgMessageChat tgMes
   sendTgMessage
     h
     repeats
     "sendSticker"
-    [("chat_id", T.pack $ show chatId), ("sticker", stiker)]
+    [("chat_id", T.pack $ show chatId), ("sticker", sticker)]
 
 sendTgKeyboard :: TgTypes.Handle -> TgTypes.TgMessage -> EchoBot.Title -> IO ()
 sendTgKeyboard h tgMes title = do
@@ -377,25 +360,23 @@ sendTgMessage h@TgTypes.Handle {..} repeats url params =
               Req.NoReqBody
               Req.jsonResponse
               (buildRequestParams params)
-        MIO.liftIO $ ckeckSendTgResponse h response
+        MIO.liftIO $ checkSendTgResponse h response
 
-ckeckSendTgResponse ::
+checkSendTgResponse ::
   TgTypes.Handle -> [Req.JsonResponse TgTypes.TgSendResponse] -> IO ()
-ckeckSendTgResponse TgTypes.Handle {..} [] = do
+checkSendTgResponse TgTypes.Handle {..} [] = do
   Logger.logError
     (EchoBot.hLogHandle hBotHandle)
-    "ckeckSendTgResponse: BAD Empty answer "
+    "checkSendTgResponse: BAD Empty answer "
   return ()
-ckeckSendTgResponse TgTypes.Handle {..} response =
+checkSendTgResponse TgTypes.Handle {..} response =
   if all (TgTypes.tgSendResponseOk . Req.responseBody) response
     then do
-      Logger.logDebug (EchoBot.hLogHandle hBotHandle) $
-        T.append
-          (T.pack "ckeckSendTgResponse: OK! \n")
-          (T.concat $ map (T.pack . show . Req.responseBody) response)
+      let textResponses = T.concat $ map (T.pack . show . Req.responseBody) response
+      Logger.logDebug (EchoBot.hLogHandle hBotHandle) $ "checkSendTgResponse: OK! \n" .< textResponses
       return ()
     else do
       Logger.logError
         (EchoBot.hLogHandle hBotHandle)
-        "ckeckSendTgResponse: BAD!"
+        "checkSendTgResponse: BAD!"
       return ()

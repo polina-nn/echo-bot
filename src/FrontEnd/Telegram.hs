@@ -1,6 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-
 -- | The telegram front-end is responsible for telegram I/O
 module FrontEnd.Telegram
   ( run,
@@ -14,7 +11,7 @@ import qualified Data.Text as T
 import qualified EchoBot
 import qualified FrontEnd.TelegramAPI as TgAPI
 import qualified FrontEnd.TelegramTypes as TgTypes
-import qualified Logger
+import Logger (logDebug, logError, (.<))
 import qualified System.Exit as Exit
 
 run :: TgTypes.Handle -> IO ()
@@ -48,9 +45,7 @@ mainLoop h@TgTypes.Handle {..} lastUpdateId mapRepeats = do
   let lastUpdateAndId' = TgAPI.tgGetLastUpdateAndId maybeTgUpdate
   case lastUpdateAndId' of
     Nothing -> do
-      Logger.logDebug
-        (EchoBot.hLogHandle (TgTypes.hBotHandle h))
-        (T.pack "mainLoop:  empty update")
+      Logger.logDebug (EchoBot.hLogHandle (TgTypes.hBotHandle h)) "mainLoop:  empty update"
       mainLoop h lastUpdateId mapRepeats
     Just (lastUpdate', lastUpdateId') -> do
       let messageOrCallback = TgAPI.tgGetLastMessageOrCallback lastUpdate'
@@ -62,9 +57,7 @@ mainLoop h@TgTypes.Handle {..} lastUpdateId mapRepeats = do
         Just currentChatHandle -> do
           response <-
             EchoBot.respond (TgTypes.hBotHandle currentChatHandle) event
-          Logger.logDebug
-            (EchoBot.hLogHandle (TgTypes.hBotHandle h))
-            (T.append "mainLoop: response  " $ T.pack $ show response)
+          Logger.logDebug (EchoBot.hLogHandle (TgTypes.hBotHandle h)) $ "mainLoop: response  " .< response
           EX.catch
             (TgAPI.sendTgResponse currentChatHandle messageOrCallback response)
             (handleException h)
@@ -77,6 +70,5 @@ mainLoop h@TgTypes.Handle {..} lastUpdateId mapRepeats = do
 
 handleException :: TgTypes.Handle -> EX.SomeException -> IO a
 handleException h (EX.SomeException e) = do
-  Logger.logError (EchoBot.hLogHandle (TgTypes.hBotHandle h)) $
-    T.pack ("handleError catch SomeException: ERROR! " ++ show e)
+  Logger.logError (EchoBot.hLogHandle (TgTypes.hBotHandle h)) $ "handleError catch SomeException: ERROR! " .< e
   Exit.exitFailure

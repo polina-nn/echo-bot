@@ -1,6 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -Wno-missing-fields #-}
-
 -- | A module to provide a configuration reader for other modules.
 module Config
   ( getBotConfig,
@@ -56,7 +53,7 @@ getBotConfig = do
           }
     Right loadedConf' -> makeBotConfig loadedConf'
 
--- | Сreate a bot config from a config file. If a value is invalid, then taked it from the default config
+-- | Create a bot config from a config file. If a value is invalid, then taken it from the default config
 makeBotConfig :: C.Config -> IO EchoBot.Config
 makeBotConfig conf = do
   confHelpReply <-
@@ -96,7 +93,7 @@ getLoggerConfig = do
         "getLoggerConfig:OK use default logger config. Did not load config file: "
           ++ show exception
       confFileHandle <-
-        validatefileHandle (ConfigurationTypes.stdError configDefault)
+        validateFileHandle (ConfigurationTypes.stdError configDefault)
       confMinLevel <-
         validateLogLevel (ConfigurationTypes.minLogLevel configDefault)
       return
@@ -120,7 +117,7 @@ makeLogConfig conf = do
       conf
       "config.minLogLevel" ::
       IO String
-  confFileHandle <- validatefileHandle readStdError
+  confFileHandle <- validateFileHandle readStdError
   confMinLevel <- validateLogLevel readMinLogLevel
   putStrLn "makeLogConfig: OK"
   return
@@ -129,19 +126,19 @@ makeLogConfig conf = do
         Logger.Impl.confMinLevel = confMinLevel
       }
 
-validatefileHandle :: String -> IO System.IO.Handle
-validatefileHandle fileText =
+validateFileHandle :: String -> IO System.IO.Handle
+validateFileHandle fileText =
   case fileText of
     "File" -> appendLog "logs.txt"
     "Terminal" -> return System.IO.stderr
     _ -> do
       putStrLn
-        "validatefileHandle: stdError is invalid in config.conf file. Use stdError from the default config"
+        "validateFileHandle: stdError is invalid in config.conf file. Use stdError from the default config"
       if ConfigurationTypes.stdError configDefault == "File"
         then appendLog "logs.txt"
         else return System.IO.stderr
 
--- | appendLog  - Сheck the existence of the file, if it does't  exist, create and append
+-- | appendLog  - check the existence of the file, if it does't  exist, create and append
 appendLog :: FilePath -> IO System.IO.Handle
 appendLog path = do
   rez <- SD.doesFileExist path
@@ -197,7 +194,7 @@ makeFrontEndTypeConfig conf = do
       putStrLn "makeFrontEndTypeConfig: OK"
       return ConfigurationTypes.ConsoleFrontEnd
     "Telegram" -> do
-      readToken <- C.lookup conf "config.token" :: IO (Maybe String)
+      readToken <- C.lookup conf "config.token"
       case readToken of
         Nothing -> do
           putStrLn
