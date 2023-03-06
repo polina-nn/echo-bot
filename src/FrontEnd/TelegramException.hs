@@ -8,7 +8,7 @@ import qualified Network.HTTP.Req as Req
 data BotException
   = -- | ServiceAPIError  -- ERROR while communicating with Telegram services (Token is invalid)
     ServiceAPIError String
-  | -- | NetworkError -- Network communication ERROR (Problem whith Internet)
+  | -- | NetworkError -- Network communication ERROR (Problem with Internet)
     NetworkError EX.SomeException
   | -- FormatError -- Failed while decoding response from Telegram failed
     FormatError String

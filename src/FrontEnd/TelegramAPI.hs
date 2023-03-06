@@ -185,11 +185,11 @@ chooseCurrentChatHandle' h@TgTypes.Handle {..} chat mapRepeats = do
       modifyIORef' mapRepeats fun
       mapRepeats'' <- readIORef mapRepeats
       state <- EchoBot.hGetState (TgTypes.hBotHandle newHandle')
-      Logger.logDebug (EchoBot.hLogHandle hBotHandle) $ T.append ("chooseCurrentChatHandle: OK! NEW handle with state from config " .< state) (" for new chart Id " .< chat)
+      Logger.logDebug (EchoBot.hLogHandle hBotHandle) $ "chooseCurrentChatHandle: OK! NEW handle with state from config " .< state <> " for new chart Id " .< chat
       return $ Just (mapRepeats'' Map.! chat)
     Just val -> do
       state <- EchoBot.hGetState (TgTypes.hBotHandle val)
-      Logger.logDebug (EchoBot.hLogHandle hBotHandle) $ T.append ("chooseCurrentChatHandle: OK! Handle with state  " .< state) (" for chart Id" .< chat)
+      Logger.logDebug (EchoBot.hLogHandle hBotHandle) $ "chooseCurrentChatHandle: OK! Handle with state  " .< state <> " for chart Id" .< chat
       return $ Just val
 
 makeBotHandle :: TgTypes.Handle -> IO TgTypes.Handle

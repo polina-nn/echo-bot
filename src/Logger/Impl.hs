@@ -31,17 +31,7 @@ logWith config logLevel text = do
     then do
       today <- currentDay
       time <- currentTime
-      let message =
-            show today
-              ++ " "
-              ++ time
-              ++ " ["
-              ++ show (confMinLevel config)
-              ++ "] "
-              ++ "["
-              ++ show logLevel
-              ++ "] "
-              ++ T.unpack text
+      let message = show today <> " " <> time <> " [" <> show (confMinLevel config) <> "] " <> "[" <> show logLevel <> "] " <> T.unpack text
       System.IO.hPutStrLn (confFileHandle config) message
       System.IO.hFlush (confFileHandle config)
     else pure ()
@@ -55,10 +45,4 @@ currentTime = do
   timezone <- TM.getCurrentTimeZone
   let (TM.TimeOfDay hour minute sec) =
         TM.localTimeOfDay $ TM.utcToLocalTime timezone now
-  return
-    ( show hour
-        ++ ":"
-        ++ show minute
-        ++ ":"
-        ++ show (div (fromEnum sec) 1000000000000)
-    )
+  return $ show hour <> ":" <> show minute <> ":" <> show (div (fromEnum sec) 1000000000000)

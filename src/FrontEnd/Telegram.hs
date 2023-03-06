@@ -7,7 +7,6 @@ where
 import qualified Control.Exception.Safe as EX
 import Data.IORef (IORef, newIORef)
 import qualified Data.Map as Map
-import qualified Data.Text as T
 import qualified EchoBot
 import qualified FrontEnd.TelegramAPI as TgAPI
 import qualified FrontEnd.TelegramTypes as TgTypes
@@ -63,9 +62,7 @@ mainLoop h@TgTypes.Handle {..} lastUpdateId mapRepeats = do
             (handleException h)
           Logger.logDebug
             (EchoBot.hLogHandle (TgTypes.hBotHandle h))
-            ( T.append "mainLoop: message sent. Update number " $
-                T.pack $ show lastUpdateId'
-            )
+            $ "mainLoop: message sent. Update number " .< lastUpdateId'
           mainLoop h (Just lastUpdateId') mapRepeats
 
 handleException :: TgTypes.Handle -> EX.SomeException -> IO a
