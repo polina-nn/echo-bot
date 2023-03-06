@@ -48,6 +48,12 @@ ghc-options:
               # but remain off in normal compilations for the time being. 
               # This allows library authors eager to make their code future compatible to adapt to new features before they even generate warnings.
 
+default-extensions:
+- DeriveGeneric 
+- LambdaCase 
+- OverloadedStrings 
+- RecordWildCards 
+
 library:
   source-dirs: src
 

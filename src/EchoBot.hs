@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 -- | The pure echo-bot logic module. It doesn't know anything about
 -- Telegram, other chat protocols, or any input/output. This is why we can easily test it.
 module EchoBot
@@ -41,8 +39,7 @@ data Handle m a = Handle
     -- | Updates the current state with applying the given function.
     -- You may find it similar to the 'modify'` method of the 'State'
     -- monad, as well as 'hGetState' is similar to 'get'.
-    hModifyState' :: (State -> State) -> m (), -- вместо (State ->  State) -> m (),
-
+    hModifyState' :: (State -> State) -> m (),
     -- | Returns @Just text@ for a pure text message, so that the bot
     -- could try to parse it as a command. Otherwise it returns
     -- 'Nothing'.

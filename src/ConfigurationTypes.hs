@@ -14,9 +14,9 @@ data ConfigDefault = ConfigDefault
     repeatReply :: String,
     -- | repetitionCount - default amount of times to echo a message
     repetitionCount :: Int,
-    -- | stdError - loggin to Terminal or File
+    -- | stdError - log to Terminal or File
     stdError :: String,
-    -- | minLogLevel - minimum loggin level. Must be Debug, Info, Warning, Error
+    -- | minLogLevel - minimum log level. Must be Debug, Info, Warning, Error
     minLogLevel :: String,
     -- | frontEnd - type of bot Console or Telegram
     frontEnd :: String

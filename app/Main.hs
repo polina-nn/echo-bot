@@ -1,6 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
-
 module Main
   ( main,
   )
@@ -105,4 +102,3 @@ makeStateAndConfig = do
   botConfig <- Config.getBotConfig
   initialState <- either (die . T.unpack) pure $ EchoBot.makeState botConfig
   return (initialState, botConfig)
-
