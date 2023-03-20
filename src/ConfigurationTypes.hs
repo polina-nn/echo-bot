@@ -4,6 +4,7 @@ module ConfigurationTypes
     ConfigDefault (..),
     FrontEnd (..),
     StdError (..),
+    ErrorField (..),
   )
 where
 
@@ -43,3 +44,15 @@ data ConfigDefault = ConfigDefault
     -- | minLogLevel - minimum log level. Must be Debug, Info, Warning, Error
     minLogLevel :: Logger.Level
   }
+
+-- | ErrorField   - list of all fields in the config, which have default values.
+-- Used this type when displaying an error about the unread value of the config field and for return default value by fromMaybeWithMessage function
+data ErrorField = HelpReply | RepeatReply | RepetitionCount | StdError | MinLogLevel | FrontEnd
+
+instance Show ErrorField where
+  show HelpReply = "helpReply"
+  show RepeatReply = "repeatReply"
+  show RepetitionCount = "repetitionCount"
+  show StdError = "stdError"
+  show MinLogLevel = "minLogLevel"
+  show FrontEnd = "frontEnd"

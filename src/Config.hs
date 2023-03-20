@@ -31,6 +31,13 @@ configDefault =
       ConfigurationTypes.minLogLevel = Logger.Debug
     }
 
+-- | fromMaybeWithMessage - print message about the field that could not be parsed. In this case, the value is taken from the default config
+fromMaybeWithMessage :: Show a => Maybe a -> a -> ConfigurationTypes.ErrorField -> IO a
+fromMaybeWithMessage Nothing a err = do
+  putStrLn $ "Did not parse " <> show err <> " field in config file. Use value from configDefault: " <> show a
+  return a
+fromMaybeWithMessage (Just val) _ _ = return val
+
 -- | Gets the bot config. In any case it can provide reasonable default values.
 getBotConfig :: IO EchoBot.Config
 getBotConfig = do
@@ -55,24 +62,12 @@ getBotConfig = do
 -- | Create a bot config from a config file. If a value is invalid, then taken it from the default config
 makeBotConfig :: C.Config -> IO EchoBot.Config
 makeBotConfig conf = do
-  confHelpReply <-
-    C.lookupDefault
-      (ConfigurationTypes.helpReply configDefault)
-      conf
-      "config.helpReply" ::
-      IO String
-  confRepeatReply <-
-    C.lookupDefault
-      (ConfigurationTypes.repeatReply configDefault)
-      conf
-      "config.repeatReply" ::
-      IO String
-  confRepetitionCount <-
-    C.lookupDefault
-      (ConfigurationTypes.repetitionCount configDefault)
-      conf
-      "config.repetitionCount" ::
-      IO Int
+  maybeConfHelpReply <- C.lookup conf "config.helpReply"
+  confHelpReply <- fromMaybeWithMessage maybeConfHelpReply (ConfigurationTypes.helpReply configDefault) ConfigurationTypes.HelpReply
+  maybeConfRepeatReply <- C.lookup conf "config.repeatReply"
+  confRepeatReply <- fromMaybeWithMessage maybeConfRepeatReply (ConfigurationTypes.repeatReply configDefault) ConfigurationTypes.RepeatReply
+  maybeConfRepetitionCount <- C.lookup conf "config.repetitionCount"
+  confRepetitionCount <- fromMaybeWithMessage maybeConfRepetitionCount (ConfigurationTypes.repetitionCount configDefault) ConfigurationTypes.RepetitionCount
   validRepetitionCount <- validateRepetitionCount confRepetitionCount
   putStrLn "makeBotConfig: OK "
   return $
@@ -111,18 +106,10 @@ getLoggerConfig = do
 
 makeLogConfig :: C.Config -> IO Logger.Impl.Config
 makeLogConfig conf = do
-  readStdError <-
-    C.lookupDefault
-      (ConfigurationTypes.stdError configDefault)
-      conf
-      "config.stdError" ::
-      IO ConfigurationTypes.StdError
-  readMinLogLevel <-
-    C.lookupDefault
-      (ConfigurationTypes.minLogLevel configDefault)
-      conf
-      "config.minLogLevel" ::
-      IO Logger.Level
+  maybeReadStdError <- C.lookup conf "config.stdError"
+  readStdError <- fromMaybeWithMessage maybeReadStdError (ConfigurationTypes.stdError configDefault) ConfigurationTypes.StdError
+  maybeReadMinLogLevel <- C.lookup conf "config.minLogLevel"
+  readMinLogLevel <- fromMaybeWithMessage maybeReadMinLogLevel (ConfigurationTypes.minLogLevel configDefault) ConfigurationTypes.MinLogLevel
   confFileHandle <- validateFileHandle readStdError
   putStrLn "makeLogConfig: OK"
   return
@@ -160,12 +147,8 @@ getFrontEndType = do
 
 makeFrontEndTypeConfig :: C.Config -> IO ConfigurationTypes.FrontEndType
 makeFrontEndTypeConfig conf = do
-  readFrontEndType <-
-    C.lookupDefault
-      ConfigurationTypes.Console
-      conf
-      "config.frontEnd" ::
-      IO ConfigurationTypes.FrontEnd
+  maybeReadFrontEndType <- C.lookup conf "config.frontEnd"
+  readFrontEndType <- fromMaybeWithMessage maybeReadFrontEndType ConfigurationTypes.Console ConfigurationTypes.FrontEnd
   case readFrontEndType of
     ConfigurationTypes.Console -> do
       putStrLn "makeFrontEndTypeConfig: OK"
