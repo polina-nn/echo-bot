@@ -11,7 +11,9 @@ module Logger
   )
 where
 
+import qualified Data.Configurator.Types as C
 import qualified Data.Text as T
+import Text.Read (readMaybe)
 
 -- | The logger handle. This is a public logger interface that can
 -- have different implementations. You can use it everywhere.
@@ -28,7 +30,11 @@ data Level
     Warning
   | -- | Something is wrong and immediate action is required.
     Error
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, Read)
+
+instance C.Configured Level where
+  convert (C.String str) = readMaybe (T.unpack str)
+  convert _ = Nothing
 
 logDebug, logInfo, logWarning, logError :: Handle m -> T.Text -> m ()
 logDebug h = hLowLevelLog h Debug
