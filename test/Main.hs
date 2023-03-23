@@ -132,7 +132,7 @@ handleWith config =
       hModifyState' = S.modify',
       hLogHandle = logHandle,
       hConfig = config,
-      hTextFromMessage = Just,
+      hTextFromMessage = id,
       hMessageFromText = id
     }
 

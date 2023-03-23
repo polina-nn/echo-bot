@@ -205,10 +205,10 @@ makeBotHandle TgTypes.Handle {..} = do
             EchoBot.hConfig = hTemplateBotConfig,
             EchoBot.hTextFromMessage =
               \case
-                TgTypes.ValidMessage text -> Just text
-                TgTypes.ErrorMessage text -> Just text
-                TgTypes.ErrorAPITelegram text -> Just text
-                TgTypes.Sticker text -> Just text,
+                TgTypes.ValidMessage text -> text
+                TgTypes.ErrorMessage text -> text
+                TgTypes.ErrorAPITelegram text -> text
+                TgTypes.Sticker text -> text,
             EchoBot.hMessageFromText = TgTypes.ValidMessage
           }
   pure
@@ -276,15 +276,7 @@ sendTgSticker h repeats tgMes sticker = do
 sendTgKeyboard :: TgTypes.Handle -> TgTypes.TgMessage -> EchoBot.Title -> IO ()
 sendTgKeyboard h tgMes title = do
   let chatId = TgTypes.tgChatId $ TgTypes.tgMessageChat tgMes
-  let keyboard :: TgTypes.TgInlineKeyboardMarkup
-      keyboard =
-        TgTypes.TgInlineKeyboardMarkup
-          [ [TgTypes.TgInlineKeyboardButton "1" "1"],
-            [TgTypes.TgInlineKeyboardButton "2" "2"],
-            [TgTypes.TgInlineKeyboardButton "3" "3"],
-            [TgTypes.TgInlineKeyboardButton "4" "4"],
-            [TgTypes.TgInlineKeyboardButton "5" "5"]
-          ]
+      keyboard = createKeyboard 5
       a = BC.unpack (A.encode keyboard)
   sendTgMessage
     h
@@ -294,6 +286,11 @@ sendTgKeyboard h tgMes title = do
       ("text", title),
       ("reply_markup", T.pack a)
     ]
+
+createKeyboard :: Int -> TgTypes.TgInlineKeyboardMarkup
+createKeyboard n = TgTypes.TgInlineKeyboardMarkup [buttons]
+  where
+    buttons = map (\x -> TgTypes.TgInlineKeyboardButton (show x) (show x)) [1 .. n]
 
 sendTgAnswerCallbackQuery :: TgTypes.Handle -> TgTypes.TgCallbackQuery -> IO ()
 sendTgAnswerCallbackQuery h@TgTypes.Handle {..} callbackQuery = do

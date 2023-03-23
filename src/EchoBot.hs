@@ -15,7 +15,6 @@ module EchoBot
   )
 where
 
-import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import Logger ((.<))
 import qualified Logger
@@ -40,10 +39,9 @@ data Handle m a = Handle
     -- You may find it similar to the 'modify'` method of the 'State'
     -- monad, as well as 'hGetState' is similar to 'get'.
     hModifyState' :: (State -> State) -> m (),
-    -- | Returns @Just text@ for a pure text message, so that the bot
-    -- could try to parse it as a command. Otherwise it returns
-    -- 'Nothing'.
-    hTextFromMessage :: a -> Maybe T.Text,
+    -- | Returns @ text @ for a pure text message, so that the bot
+    -- could try to parse it as a command.
+    hTextFromMessage :: a -> T.Text,
     -- | Constructs a message from a pure text. The bot can use it for
     -- creating a help text message.
     --
@@ -163,13 +161,13 @@ handleSettingRepetitionCount h count = do
 isCommand :: Handle m a -> T.Text -> a -> Bool
 isCommand h text message =
   let a = hTextFromMessage h message
-   in (a == Just "/help" && text == "/help") || (a == Just "/repeat" && text == "/repeat")
+   in (a == "/help" && text == "/help") || (a == "/repeat" && text == "/repeat")
 
 -- | respondWithEchoedMessage -- send echo "a" times
 respondWithEchoedMessage :: Monad m => Handle m a -> a -> m [Response a]
 respondWithEchoedMessage h message = do
   Logger.logInfo (hLogHandle h) $
-    "Echoing user input: user entered " .< fromMaybe "<multimedia?>" (hTextFromMessage h message)
+    "Echoing user input: user entered " .< hTextFromMessage h message
   state <- hGetState h
   let repetitionCount = stRepetitionCount state
   return $ replicate repetitionCount $ MessageResponse message
