@@ -76,10 +76,10 @@ makeBotHandleForTelegram logHandle = do
         EchoBot.hConfig = botConfig,
         EchoBot.hTextFromMessage =
           \case
-            TgTypes.ValidMessage text -> Just text
-            TgTypes.ErrorMessage text -> Just text
-            TgTypes.ErrorAPITelegram text -> Just text
-            TgTypes.Sticker text -> Just text,
+            TgTypes.ValidMessage text -> text
+            TgTypes.ErrorMessage text -> text
+            TgTypes.ErrorAPITelegram text -> text
+            TgTypes.Sticker text -> text,
         EchoBot.hMessageFromText = TgTypes.ValidMessage
       }
 
@@ -93,7 +93,7 @@ makeBotHandleForPlainText logHandle = do
         EchoBot.hModifyState' = modifyIORef' stateRef,
         EchoBot.hLogHandle = logHandle,
         EchoBot.hConfig = botConfig,
-        EchoBot.hTextFromMessage = Just,
+        EchoBot.hTextFromMessage = id,
         EchoBot.hMessageFromText = id
       }
 
